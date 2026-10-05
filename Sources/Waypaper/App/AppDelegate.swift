@@ -3,7 +3,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let library: WallpaperLibrary
     let displays: DisplayCoordinator
     let smoke: Bool
@@ -66,12 +66,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.title = "Waypaper"
             window.minSize = NSSize(width: 860, height: 560)
             window.isReleasedWhenClosed = false
+            window.delegate = self
             window.contentView = NSHostingView(rootView: view)
             window.center()
             self.window = window
         }
+        // Dock icon and real minimize-to-Dock only make sense while the library window is open;
+        // a pure menu-bar accessory app otherwise (matches the original "no Dock icon" design).
+        NSApp.setActivationPolicy(.regular)
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        guard notification.object as? NSWindow === window else { return }
+        NSApp.setActivationPolicy(.accessory)
     }
 
     @objc func chooseVideos() {

@@ -7,6 +7,9 @@ final class DisplayCoordinator: NSObject, ObservableObject {
     @Published private(set) var displays: [DisplayDescriptor] = []
     @Published private(set) var assignments: [String: DisplaySettings] = [:]
     @Published var errorMessage: String?
+    /// Displays currently baking a sharpened variant (or otherwise mid `session.apply`), so the
+    /// UI can show a "preparando" indicator instead of looking frozen during the one-time export.
+    @Published private(set) var preparingDisplays: Set<String> = []
     private(set) var sessions: [String: WallpaperSession] = [:]
 
     private let library: WallpaperLibrary
@@ -65,6 +68,8 @@ final class DisplayCoordinator: NSObject, ObservableObject {
         let session = sessions[displayID] ?? makeSession(for: displayID)
         session.attach(screen: screen)
         sessions[displayID] = session
+        preparingDisplays.insert(displayID)
+        defer { preparingDisplays.remove(displayID) }
         try await session.apply(settings: normalized, workspaceSuspended: isPlaybackSuspended)
     }
 

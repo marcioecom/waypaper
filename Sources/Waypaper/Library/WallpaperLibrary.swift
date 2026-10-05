@@ -28,6 +28,16 @@ final class WallpaperLibrary: ObservableObject {
         }
     }
 
+    /// Number of discrete sharpness buckets (0 = original, 1...levelCount = baked variants).
+    /// Quantizing avoids baking a near-infinite number of near-identical files as the user
+    /// drags the slider; `SharpnessControl` already steps in 0.05 increments and only commits
+    /// on drag end, so 10 buckets (10% increments) comfortably covers the meaningful range.
+    private static let sharpnessLevelCount = 10
+
+    /// In-flight bake tasks, deduplicated by destination URL so concurrent requests for the
+    /// same (wallpaper, level) share one export instead of racing to write the same file.
+    private var variantTasks: [URL: Task<URL, Error>] = [:]
+
     func url(for wallpaper: Wallpaper) -> URL {
         root.appendingPathComponent(WallpaperPersistence.mediaDirectoryName, isDirectory: true)
             .appendingPathComponent(wallpaper.fileName)
@@ -68,6 +78,42 @@ final class WallpaperLibrary: ObservableObject {
         }
     }
 
+    /// Resolves the URL to play for a given sharpness (0 = original file, untouched). For
+    /// sharpness > 0, bakes (or reuses a cached) sharpened copy once via
+    /// `WallpaperVariantRenderer` instead of compositing in real time during playback — see
+    /// that type's doc comment for why. The original imported file is only ever read here.
+    func ensureSharpenedVariant(for wallpaper: Wallpaper, sharpness: Double) async throws -> URL {
+        let clamped = DisplaySettings.clampSharpness(sharpness)
+        guard clamped > 0 else { return url(for: wallpaper) }
+        guard !persistenceBlocked else { throw WallpaperLibraryError.persistenceBlocked }
+
+        let level = max(1, min(Self.sharpnessLevelCount, Int((clamped * Double(Self.sharpnessLevelCount)).rounded())))
+        let ext = (wallpaper.fileName as NSString).pathExtension
+        let directory = try WallpaperPersistence.ownedVariantsDirectory(for: wallpaper, root: root)
+        let destination = directory.appendingPathComponent(
+            WallpaperPersistence.variantFileName(level: level, originalExtension: ext),
+            isDirectory: false
+        )
+
+        if FileManager.default.fileExists(atPath: destination.path) {
+            return destination
+        }
+
+        if let existing = variantTasks[destination] {
+            return try await existing.value
+        }
+
+        let source = url(for: wallpaper)
+        let normalizedLevel = Double(level) / Double(Self.sharpnessLevelCount)
+        let task = Task<URL, Error> {
+            try await WallpaperVariantRenderer.render(source: source, sharpness: normalizedLevel, to: destination)
+            return destination
+        }
+        variantTasks[destination] = task
+        defer { variantTasks[destination] = nil }
+        return try await task.value
+    }
+
     func remove(_ wallpaper: Wallpaper) throws {
         guard !persistenceBlocked else { throw WallpaperLibraryError.persistenceBlocked }
         guard !isImporting else { throw WallpaperLibraryError.importInProgress }
@@ -76,6 +122,7 @@ final class WallpaperLibrary: ObservableObject {
         let removed = wallpapers[index]
         let mediaURL = try WallpaperPersistence.ownedMediaURL(for: removed, root: root)
         let thumbURL = try WallpaperPersistence.ownedThumbnailURL(for: removed, root: root)
+        let variantsDirectory = try? WallpaperPersistence.ownedVariantsDirectory(for: removed, root: root)
 
         var next = wallpapers
         next.remove(at: index)
@@ -93,6 +140,17 @@ final class WallpaperLibrary: ObservableObject {
         } catch {
             deletionErrors.append(error.localizedDescription)
         }
+        if let variantsDirectory {
+            for (destination, task) in variantTasks where destination.deletingLastPathComponent() == variantsDirectory {
+                task.cancel()
+                variantTasks[destination] = nil
+            }
+            do {
+                try deleteOwnedDirectory(at: variantsDirectory)
+            } catch {
+                deletionErrors.append(error.localizedDescription)
+            }
+        }
         if !deletionErrors.isEmpty {
             throw WallpaperLibraryError.deletionFailed(
                 "O wallpaper foi removido da biblioteca, mas alguns arquivos não puderam ser apagados: \(deletionErrors.joined(separator: "; "))"
@@ -106,11 +164,18 @@ final class WallpaperLibrary: ObservableObject {
         try fm.removeItem(at: url)
     }
 
+    private func deleteOwnedDirectory(at url: URL) throws {
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: url.path) else { return }
+        try fm.removeItem(at: url)
+    }
+
     private func prepareLibraryRoot() throws {
         let fm = FileManager.default
         try fm.createDirectory(at: root, withIntermediateDirectories: true)
         try fm.createDirectory(at: root.appendingPathComponent(WallpaperPersistence.mediaDirectoryName, isDirectory: true), withIntermediateDirectories: true)
         try fm.createDirectory(at: root.appendingPathComponent(WallpaperPersistence.thumbnailsDirectoryName, isDirectory: true), withIntermediateDirectories: true)
+        try fm.createDirectory(at: root.appendingPathComponent(WallpaperPersistence.variantsDirectoryName, isDirectory: true), withIntermediateDirectories: true)
     }
 }
 

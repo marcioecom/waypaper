@@ -47,6 +47,9 @@ enum WallpaperPersistence {
     static let manifestFileName = "manifest.json"
     static let mediaDirectoryName = "media"
     static let thumbnailsDirectoryName = "thumbnails"
+    /// Per-wallpaper derived copies with sharpening baked in, keyed by quantized level.
+    /// Never contains anything derived from an untrusted/unowned wallpaper id.
+    static let variantsDirectoryName = "variants"
 
     static func load(from root: URL) throws -> [Wallpaper] {
         let url = root.appendingPathComponent(manifestFileName)
@@ -139,6 +142,29 @@ enum WallpaperPersistence {
             throw WallpaperLibraryError.corruptedManifest("Caminho de miniatura fora da biblioteca")
         }
         return candidate
+    }
+
+    /// Directory holding baked sharpened variants for a single wallpaper. Named after the
+    /// wallpaper's own UUID (not user-controlled), so no extra traversal validation is needed
+    /// beyond containment inside `variants/`.
+    static func ownedVariantsDirectory(for wallpaper: Wallpaper, root: URL) throws -> URL {
+        var seen = Set<UUID>()
+        try validateWallpaper(wallpaper, seenIDs: &seen)
+        let variantsRoot = root
+            .appendingPathComponent(variantsDirectoryName, isDirectory: true)
+            .standardizedFileURL
+        let candidate = variantsRoot
+            .appendingPathComponent(wallpaper.id.uuidString, isDirectory: true)
+            .standardizedFileURL
+        guard isContained(candidate, in: variantsRoot) else {
+            throw WallpaperLibraryError.corruptedManifest("Caminho de variante fora da biblioteca")
+        }
+        return candidate
+    }
+
+    /// File name for a baked sharpened variant at a given quantized level (1...levelCount).
+    static func variantFileName(level: Int, originalExtension: String) -> String {
+        "sharp-\(level).\(originalExtension)"
     }
 
     private static func isContained(_ file: URL, in directory: URL) -> Bool {

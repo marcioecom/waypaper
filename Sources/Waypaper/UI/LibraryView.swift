@@ -19,6 +19,7 @@ struct LibraryView: View {
     private var selected: Wallpaper? { library.wallpapers.first { $0.id == selectedID } }
     private var settings: DisplaySettings { displays.assignments[displayID] ?? DisplaySettings() }
     private var current: Wallpaper? { library.wallpapers.first { $0.id == settings.wallpaperID } }
+    private var isPreparing: Bool { displays.preparingDisplays.contains(displayID) }
 
     var body: some View {
         HSplitView {
@@ -214,11 +215,17 @@ struct LibraryView: View {
                     .pickerStyle(.segmented)
                     .help("Preencher recorta as bordas; Ajustar mantém todo o vídeo com barras quando necessário.")
                     .disabled(current == nil || working)
-                    SharpnessControl(value: settings.sharpness, enabled: current != nil && !working) { value in
+                    SharpnessControl(value: settings.sharpness, enabled: current != nil && !working && !isPreparing) { value in
                         var updated = settings; updated.sharpness = value; save(updated)
                     }
-                    Text("Nitidez realça contornos; não é super-resolução por IA. Pode acentuar ruído e consumir mais energia.")
+                    Text("Nitidez realça contornos; não é super-resolução por IA. A primeira vez que você liga um nível de nitidez, o vídeo é processado uma única vez em segundo plano; depois disso a reprodução é tão leve quanto o vídeo original.")
                         .font(.caption).foregroundStyle(.secondary)
+                    if isPreparing {
+                        HStack(spacing: 6) {
+                            ProgressView().controlSize(.small)
+                            Text("Preparando nitidez…").font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
                     HStack {
                         Button(settings.paused ? "Retomar" : "Pausar") {
                             var updated = settings; updated.paused.toggle(); save(updated)

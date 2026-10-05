@@ -1,6 +1,5 @@
 import AppKit
 import AVFoundation
-import CoreImage
 
 @MainActor
 final class WallpaperSession {
@@ -18,8 +17,9 @@ final class WallpaperSession {
     private var failureObserver: NSObjectProtocol?
     private var workspaceSuspended = false
     private var playbackBlockedByFailure = false
+    private var fullyOccluded = false
+    private var occlusionObserver: NSObjectProtocol?
     private var loadedURL: URL?
-    private var loadedSharpness: Double = 0
     var onFailure: ((String) -> Void)?
 
     /// True when playback is stopped due to load/runtime failure; distinct from `DisplaySettings.paused`.
@@ -65,6 +65,13 @@ final class WallpaperSession {
         teardownWindowAndPlayer()
     }
 
+    /// Fully occluded (e.g. another app covers the whole screen in full-screen/Spaces) stops
+    /// decode+composite work entirely; the wallpaper isn't visible, so there's nothing to save for.
+    private func updateOcclusion(for window: NSWindow) {
+        fullyOccluded = !window.occlusionState.contains(.visible)
+        syncPlayback()
+    }
+
     func updateGeometry(for screen: NSScreen) {
         self.screen = screen
         guard let window else { return }
@@ -97,27 +104,32 @@ final class WallpaperSession {
 
         guard screen != nil else { return }
 
-        let url = library.url(for: wallpaper)
-        if loadedURL == url,
-           loadedSharpness == settings.sharpness,
-           looper != nil,
-           !playbackBlockedByFailure {
-            videoView?.apply(fit: settings.fit)
-            syncPlayback()
-            return
-        }
-
+        // Resolve the content URL up front: sharpness > 0 plays a one-time baked variant
+        // (see WallpaperLibrary.ensureSharpenedVariant / WallpaperVariantRenderer) instead of a
+        // live CIFilter composition, so `loadedURL` alone already captures the sharpness level.
         let generation = invalidateLoads()
         let fit = settings.fit
         let sharpness = settings.sharpness
 
-        let task = Task<Void, Error> { @MainActor in
-            try await self.performLoad(url: url, generation: generation, fit: fit, sharpness: sharpness)
+        let task = Task<URL, Error> { @MainActor in
+            let url = try await library.ensureSharpenedVariant(for: wallpaper, sharpness: sharpness)
+            try self.ensureLoadStillValid(generation: generation)
+            if self.loadedURL == url, self.looper != nil, !self.playbackBlockedByFailure {
+                self.videoView?.apply(fit: fit)
+                return url
+            }
+            try await self.performLoad(url: url, generation: generation, fit: fit)
+            return url
         }
-        loadTask = task
+        loadTask = Task<Void, Error> { try await withTaskCancellationHandler {
+            _ = try await task.value
+        } onCancel: {
+            task.cancel()
+        } }
 
+        let resolvedURL: URL
         do {
-            try await task.value
+            resolvedURL = try await task.value
         } catch is CancellationError {
             return
         } catch {
@@ -130,8 +142,7 @@ final class WallpaperSession {
         guard generation == loadGeneration else { return }
         guard screen != nil else { return }
 
-        loadedURL = url
-        loadedSharpness = sharpness
+        loadedURL = resolvedURL
         playbackBlockedByFailure = false
         videoView?.apply(fit: fit)
         syncPlayback()
@@ -140,7 +151,6 @@ final class WallpaperSession {
     func clearPlayback() {
         invalidateLoads()
         loadedURL = nil
-        loadedSharpness = 0
         playbackBlockedByFailure = false
         teardownWindowAndPlayer()
     }
@@ -157,6 +167,7 @@ final class WallpaperSession {
             && !settings.paused
             && !workspaceSuspended
             && !playbackBlockedByFailure
+            && !fullyOccluded
         if shouldPlay {
             player.play()
         } else {
@@ -170,6 +181,10 @@ final class WallpaperSession {
         if let failureObserver {
             NotificationCenter.default.removeObserver(failureObserver)
             self.failureObserver = nil
+        }
+        if let occlusionObserver {
+            NotificationCenter.default.removeObserver(occlusionObserver)
+            self.occlusionObserver = nil
         }
     }
 
@@ -201,6 +216,17 @@ final class WallpaperSession {
         window.orderFrontRegardless()
         self.window = window
         self.videoView = view
+        fullyOccluded = !window.occlusionState.contains(.visible)
+        occlusionObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didChangeOcclusionStateNotification,
+            object: window,
+            queue: .main
+        ) { [weak self, weak window] _ in
+            MainActor.assumeIsolated {
+                guard let self, let window else { return }
+                self.updateOcclusion(for: window)
+            }
+        }
     }
 
     private func teardownWindowAndPlayer() {
@@ -209,13 +235,17 @@ final class WallpaperSession {
         looper = nil
         player.removeAllItems()
         loadedURL = nil
-        loadedSharpness = 0
+        if let occlusionObserver {
+            NotificationCenter.default.removeObserver(occlusionObserver)
+            self.occlusionObserver = nil
+        }
+        fullyOccluded = false
         window?.close()
         window = nil
         videoView = nil
     }
 
-    private func performLoad(url: URL, generation: Int, fit: WallpaperFit, sharpness: Double) async throws {
+    private func performLoad(url: URL, generation: Int, fit: WallpaperFit) async throws {
         guard FileManager.default.isReadableFile(atPath: url.path) else {
             throw WaypaperPlaybackError.unreadableVideo(url.path)
         }
@@ -239,15 +269,10 @@ final class WallpaperSession {
 
         try ensureLoadStillValid(generation: generation)
 
-
+        // No videoComposition here: sharpness is baked into the file ahead of time (see
+        // WallpaperLibrary.ensureSharpenedVariant), so playback is plain hardware decode
+        // regardless of the sharpness setting.
         let template = AVPlayerItem(asset: asset)
-        if sharpness > 0, let videoTrack = tracks.first {
-            template.videoComposition = try await Self.makeSharpeningComposition(
-                for: asset,
-                videoTrack: videoTrack,
-                sharpness: sharpness
-            )
-        }
         try ensureLoadStillValid(generation: generation)
         player.pause()
         looper?.disableLooping()
@@ -263,44 +288,5 @@ final class WallpaperSession {
         try Task.checkCancellation()
         guard generation == loadGeneration else { throw CancellationError() }
         guard screen != nil else { throw CancellationError() }
-    }
-
-    private static func makeSharpeningComposition(
-        for asset: AVAsset,
-        videoTrack: AVAssetTrack,
-        sharpness: Double
-    ) async throws -> AVVideoComposition? {
-        guard sharpness > 0 else { return nil }
-        let amount = DisplaySettings.clampSharpness(sharpness) * 1.5
-        let composition = AVMutableVideoComposition(asset: asset, applyingCIFiltersWithHandler: { request in
-            let source = request.sourceImage.clampedToExtent()
-            guard let filter = CIFilter(name: "CIUnsharpMask") else {
-                request.finish(with: source, context: nil)
-                return
-            }
-            filter.setValue(source, forKey: kCIInputImageKey)
-            filter.setValue(amount, forKey: kCIInputIntensityKey)
-            filter.setValue(1.5, forKey: kCIInputRadiusKey)
-            let output = filter.outputImage?.cropped(to: request.sourceImage.extent) ?? source
-            request.finish(with: output, context: nil)
-        })
-        if let frameDuration = try await sourceFrameDuration(for: videoTrack) {
-            composition.frameDuration = frameDuration
-        }
-        return composition
-    }
-
-    /// Preserves source cadence for CI filter compositions (AVFoundation otherwise defaults to ~30 fps).
-    private static func sourceFrameDuration(for track: AVAssetTrack) async throws -> CMTime? {
-        let minDuration = try await track.load(.minFrameDuration)
-        if minDuration.isValid,
-           !minDuration.isIndefinite,
-           minDuration.seconds.isFinite,
-           minDuration.seconds > 0 {
-            return minDuration
-        }
-        let nominalRate = try await track.load(.nominalFrameRate)
-        guard nominalRate.isFinite, nominalRate > 0 else { return nil }
-        return CMTime(seconds: 1.0 / Double(nominalRate), preferredTimescale: 60_000)
     }
 }

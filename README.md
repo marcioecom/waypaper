@@ -14,6 +14,8 @@ Abra o app e importe vídeos pelo botão **Importar vídeos** ou arrastando arqu
 
 O ícone de onda/W na barra de menus abre a biblioteca, importa arquivos, pausa/retoma todos os monitores ou encerra o app. Fechar a janela da biblioteca não encerra os wallpapers; a prévia é pausada ao ocultar/fechar/minimizar a janela. Remover um wallpaper da biblioteca remove suas cópias gerenciadas e suas associações aos monitores, nunca o arquivo original.
 
+O Waypaper é um app de barra de menus (`LSUIElement`): sem janela aberta, não há ícone no Dock nem alternância por Cmd-Tab. Assim que a biblioteca é exibida, o ícone aparece no Dock (e pode ser minimizado normalmente); fechar a janela volta ao modo discreto só na barra de menus.
+
 ### Monitores e energia
 
 - Cada monitor independente tem seu próprio player, loop, wallpaper, pausa, enquadramento e nitidez.
@@ -23,12 +25,17 @@ O ícone de onda/W na barra de menus abre a biblioteca, importa arquivos, pausa/
 - Suspensão/desligamento da tela e inatividade de sessão têm bloqueios separados. A retomada nunca desfaz a pausa manual.
 - Com **Reduzir movimento** ativo, a primeira aplicação em um monitor começa pausada.
 - Vídeos são sempre reproduzidos sem áudio. Não há agentes, serviços ou inicialização automática instalados.
+- Quando a janela do wallpaper fica totalmente oculta (outro app em tela cheia cobrindo a tela inteira, por exemplo), a decodificação/composição desse monitor é pausada automaticamente; volta assim que algo fica visível. Isso é independente da pausa manual.
 
 ### Qualidade
 
-**Nitidez** é um filtro `CIUnsharpMask`, opcional e desligado por padrão. Zero reproduz o vídeo sem composição de filtro. O ajuste não recomprime nem modifica o arquivo; a composição preserva a cadência informada pelo vídeo. A aplicação do filtro pode reiniciar o loop.
+**Nitidez** é um filtro `CIUnsharpMask`, opcional e desligado por padrão. Zero reproduz o vídeo original, sem nenhum processamento. O ajuste nunca modifica o arquivo importado.
 
-Não é super-resolução por IA, nem prova de que o iWallpaper faça enhancement. Pode realçar ruído/halos e aumentar o uso da GPU; compare com **Original** antes de manter uma intensidade alta. O enquadramento e a escala Retina são tratados explicitamente.
+Não é super-resolução por IA, nem prova de que o iWallpaper faça enhancement. Pode realçar ruído/halos e aumentar o uso da GPU durante o processamento inicial; compare com **Original** antes de manter uma intensidade alta. O enquadramento e a escala Retina são tratados explicitamente.
+
+**Como a nitidez é aplicada (e por que não é em tempo real)**: a primeira abordagem compunha o filtro quadro a quadro durante a própria reprodução (`AVMutableVideoComposition` + `CIUnsharpMask` no `AVPlayerItem`). Medido com `sample` em uso real (vídeo 4K/60): nitidez 100% = 66% CPU / 1,5 GB RAM contra 3,5% CPU / 79 MB RAM com nitidez 0%, com o custo dominado por uma chamada síncrona de `CIContext.render` por quadro (`CI::RenderTask::waitUntilCompleted`, ~76% das amostras do compositor). Limitar a composição a 30 fps não reduziu esse consumo e ainda piorou a fluidez a 60 fps, então essa abordagem foi abandonada.
+
+A biblioteca já guarda uma cópia do vídeo original (`media/`); quando a nitidez é ligada, a mesma composição `CIUnsharpMask` é usada apenas para **gravar uma vez** uma cópia derivada em `variants/<id>/sharp-<nível>.<ext>` (`WallpaperVariantRenderer`, via `AVAssetExportSession`). Essa cópia derivada é reproduzida depois como qualquer outro vídeo — decodificação direta por hardware, sem composição em tempo real —, então o custo de CPU/RAM em reprodução volta a ser o mesmo de nitidez 0%, independentemente do nível escolhido. O nível é arredondado em 10 faixas (10% em 10%) para não gerar um arquivo por posição do slider; trocar de faixa reaproveita o arquivo já gerado. O processamento inicial roda em segundo plano (indicador "Preparando nitidez…" na interface) e é proporcional à duração do vídeo; o arquivo original em `media/` nunca é alterado. Remover um wallpaper da biblioteca também apaga suas variantes.
 
 ## Desenvolvimento
 
@@ -51,7 +58,7 @@ Passar um arquivo importa uma nova cópia. A preferência antiga `videoPath`, se
 ```text
 Sources/Waypaper/
   App/         entrada, ciclo de vida, menu e smoke check integrado
-  Library/     modelo, validação, importação, miniaturas e persistência
+  Library/     modelo, validação, importação, miniaturas, persistência e variantes com nitidez pré-processada
   Playback/    identidade dos monitores, coordenação, sessões e camada de vídeo
   UI/          biblioteca SwiftUI e prévia AVKit
   Resources/   ícones PNG e ICNS
@@ -89,11 +96,11 @@ Com uma sessão gráfica ativa e um vídeo curto:
 swift run Waypaper --smoke-test "himmel-x-frieren-beyond-the-journeys-end-moewalls-com.mp4"
 ```
 
-O check usa uma biblioteca temporária e não altera sua biblioteca real. Exercita importação/cópia, miniatura, reabertura do manifesto, rejeição de arquivo inválido e de caminho inseguro, proteção de manifesto corrompido, cancelamento, reprodução real, pausa, sessões independentes, configuração de monitor desconectado, nitidez/cadência, loop, reconexão simulada e remoção sem apagar o original. Também abre a interface SwiftUI, captura sua janela, aciona a prévia pelo atalho de teclado e verifica a pausa da prévia ao ocultá-la. Imprime `PASS` ou encerra com código 1. A espera de loop tem limite de 90 segundos.
+O check usa uma biblioteca temporária e não altera sua biblioteca real. Exercita importação/cópia, miniatura, reabertura do manifesto, rejeição de arquivo inválido e de caminho inseguro, proteção de manifesto corrompido, cancelamento, reprodução real, pausa, sessões independentes, configuração de monitor desconectado, nitidez pré-processada uma única vez (com cache reaproveitado e original intacto), loop, reconexão simulada e remoção sem apagar o original. Também abre a interface SwiftUI, captura sua janela, aciona a prévia pelo atalho de teclado e verifica a pausa da prévia ao ocultá-la. Imprime `PASS` ou encerra com código 1. A espera de loop tem limite de 90 segundos.
 
 **Limite da verificação local:** há apenas uma tela física neste ambiente. Duas sessões reais são exercitadas nessa tela e desconexão/reconexão é simulada via a mesma reconciliação usada pelas notificações do sistema. Dois monitores físicos, hot-plug real, espelhamento, Spaces/Mission Control e bloqueio/suspensão reais precisam de validação nesse hardware. A captura de NSView não comprova a composição final dos planos de vídeo do WindowServer.
 
-Sem detecção de oclusão do wallpaper por outras janelas, política automática de bateria, catálogo remoto ou super-resolução. Cada monitor ativo decodifica seu vídeo; vários vídeos 4K/60 e nitidez aumentam o consumo. Monitores sem UUID ou serial usam identificação transitória e podem exigir nova associação após reconectar/reiniciar.
+A pausa por oclusão só cobre o monitor estar totalmente coberto (ex.: outro app em tela cheia); não há política automática de bateria, catálogo remoto ou super-resolução. Cada monitor visível decodifica seu vídeo; vários vídeos 4K/60 simultâneos aumentam o consumo mesmo sem nitidez (nitidez não adiciona custo de reprodução — veja "Qualidade" — mas o processamento inicial de cada nível é pontualmente mais pesado). Monitores sem UUID ou serial usam identificação transitória e podem exigir nova associação após reconectar/reiniciar.
 
 ## Identidade visual
 

@@ -102,18 +102,28 @@ enum SmokeCheck {
         print("PASS: sessões independentes, configuração offline e pausa manual preservada ao acordar")
         settings.fit = .fit
         settings.sharpness = 0.35
+        let originalBytesBeforeSharpen = try Data(contentsOf: library.url(for: wallpaper))
         try await displays.updateSettings(settings, for: screen.id)
-        try await waitUntil("Nitidez não apresentou frames", timeout: 25) {
+        try await waitUntil("Nitidez não apresentou frames", timeout: 60) {
             guard let updated = displays.sessions[screen.id] else { return false }
             return updated.videoView?.videoLayer.isReadyForDisplay == true && updated.player.currentTime().seconds > 0.5
         }
-        try require(displays.sessions[screen.id]?.player.currentItem?.videoComposition != nil, "Nitidez não chegou à composição de vídeo")
-        let sourceTracks = try await AVURLAsset(url: source).loadTracks(withMediaType: .video)
-        let cadence = try await sourceTracks[0].load(.minFrameDuration)
-        if cadence.seconds.isFinite && cadence.seconds > 0 {
-            let composedCadence = displays.sessions[screen.id]?.player.currentItem?.videoComposition?.frameDuration.seconds ?? 0
-            try require(abs(composedCadence - cadence.seconds) < 0.0001, "Nitidez alterou a cadência do vídeo")
-        }
+        // Sharpening is now baked once into a derived file instead of composited in real time,
+        // so playback must be plain hardware decode: no AVVideoComposition at play time.
+        try require(displays.sessions[screen.id]?.player.currentItem?.videoComposition == nil, "Reprodução com nitidez não deveria usar composição em tempo real")
+        let sharpenedURL = try await library.ensureSharpenedVariant(for: wallpaper, sharpness: 0.35)
+        try require(sharpenedURL != library.url(for: wallpaper), "Nitidez deveria reproduzir um arquivo derivado, não o original")
+        try require(FileManager.default.fileExists(atPath: sharpenedURL.path), "Variante com nitidez não foi gravada em disco")
+        let originalBytesAfterSharpen = try Data(contentsOf: library.url(for: wallpaper))
+        try require(originalBytesAfterSharpen == originalBytesBeforeSharpen, "Aplicar nitidez alterou o arquivo original")
+        // A second request for the same (wallpaper, level) must reuse the cached file rather
+        // than re-exporting it.
+        let variantModifiedAt = try FileManager.default.attributesOfItem(atPath: sharpenedURL.path)[.modificationDate] as? Date
+        let reusedURL = try await library.ensureSharpenedVariant(for: wallpaper, sharpness: 0.37)
+        try require(reusedURL == sharpenedURL, "Níveis de nitidez próximos deveriam reutilizar o mesmo bucket")
+        let variantModifiedAfterReuse = try FileManager.default.attributesOfItem(atPath: sharpenedURL.path)[.modificationDate] as? Date
+        try require(variantModifiedAt == variantModifiedAfterReuse, "Variante em cache foi regravada em vez de reutilizada")
+        print("PASS: nitidez pré-processada uma única vez, original intacto e cache reutilizado")
         displays.suspendForSessionInactivity()
         displays.suspendForWorkspace()
         displays.resumeForWorkspace()
