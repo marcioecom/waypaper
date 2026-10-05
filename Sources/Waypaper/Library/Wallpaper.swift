@@ -1,0 +1,152 @@
+import Foundation
+
+struct Wallpaper: Identifiable, Codable, Equatable {
+    let id: UUID
+    var title: String
+    /// File name inside the library `media` directory.
+    let fileName: String
+    let width: Int
+    let height: Int
+    let duration: Double
+}
+
+private struct WallpaperManifest: Codable {
+    var wallpapers: [Wallpaper]
+}
+
+enum WallpaperLibraryError: LocalizedError {
+    case corruptedManifest(String)
+    case persistenceBlocked
+    case importInProgress
+    case invalidSource(String)
+    case invalidVideo(String)
+    case unreadableSource(String)
+    case deletionFailed(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .corruptedManifest(let detail):
+            return "Biblioteca corrompida; o arquivo não foi alterado. (\(detail))"
+        case .persistenceBlocked:
+            return "A biblioteca não pode ser alterada até o manifesto corrompido ser corrigido."
+        case .importInProgress:
+            return "Aguarde o fim da importação em andamento."
+        case .invalidSource(let message):
+            return message
+        case .invalidVideo(let message):
+            return message
+        case .unreadableSource(let path):
+            return "O arquivo não está acessível: \(path)"
+        case .deletionFailed(let message):
+            return message
+        }
+    }
+}
+
+enum WallpaperPersistence {
+    static let manifestFileName = "manifest.json"
+    static let mediaDirectoryName = "media"
+    static let thumbnailsDirectoryName = "thumbnails"
+
+    static func load(from root: URL) throws -> [Wallpaper] {
+        let url = root.appendingPathComponent(manifestFileName)
+        guard FileManager.default.fileExists(atPath: url.path) else { return [] }
+        do {
+            let data = try Data(contentsOf: url)
+            let manifest = try JSONDecoder().decode(WallpaperManifest.self, from: data)
+            return try validatedWallpapers(manifest.wallpapers)
+        } catch let error as WallpaperLibraryError {
+            throw error
+        } catch {
+            throw WallpaperLibraryError.corruptedManifest(error.localizedDescription)
+        }
+    }
+
+    static func save(_ wallpapers: [Wallpaper], to root: URL) throws {
+        _ = try validatedWallpapers(wallpapers)
+        let url = root.appendingPathComponent(manifestFileName)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let payload = WallpaperManifest(wallpapers: wallpapers)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(payload)
+        try data.write(to: url, options: .atomic)
+    }
+
+    static func validatedWallpapers(_ wallpapers: [Wallpaper]) throws -> [Wallpaper] {
+        var seenIDs = Set<UUID>()
+        for wallpaper in wallpapers {
+            try validateWallpaper(wallpaper, seenIDs: &seenIDs)
+        }
+        return wallpapers
+    }
+
+    static func validateWallpaper(_ wallpaper: Wallpaper, seenIDs: inout Set<UUID>) throws {
+        guard seenIDs.insert(wallpaper.id).inserted else {
+            throw WallpaperLibraryError.corruptedManifest("ID duplicado: \(wallpaper.id.uuidString)")
+        }
+        guard wallpaper.width > 0, wallpaper.height > 0 else {
+            throw WallpaperLibraryError.corruptedManifest("Dimensões inválidas para \(wallpaper.id.uuidString)")
+        }
+        guard wallpaper.duration.isFinite, wallpaper.duration > 0 else {
+            throw WallpaperLibraryError.corruptedManifest("Duração inválida para \(wallpaper.id.uuidString)")
+        }
+        guard isOwnedMediaFileName(wallpaper.fileName, wallpaperID: wallpaper.id) else {
+            throw WallpaperLibraryError.corruptedManifest("Nome de arquivo inválido para \(wallpaper.id.uuidString)")
+        }
+    }
+
+    /// Basename only, owned layout: `{uuid}.{ext}` with uuid matching the entry id.
+    static func isOwnedMediaFileName(_ fileName: String, wallpaperID: UUID) -> Bool {
+        guard !fileName.isEmpty else { return false }
+        guard fileName == (fileName as NSString).lastPathComponent else { return false }
+        guard !fileName.contains("/"), !fileName.contains("\\") else { return false }
+        guard fileName != ".", fileName != ".." else { return false }
+        if fileName.contains("..") { return false }
+        let requiredPrefix = wallpaperID.uuidString + "."
+        guard fileName.hasPrefix(requiredPrefix) else { return false }
+        let ext = String(fileName.dropFirst(requiredPrefix.count))
+        guard !ext.isEmpty, !ext.contains(".") else { return false }
+        return true
+    }
+
+    static func ownedMediaURL(for wallpaper: Wallpaper, root: URL) throws -> URL {
+        var seen = Set<UUID>()
+        try validateWallpaper(wallpaper, seenIDs: &seen)
+        let mediaDirectory = root
+            .appendingPathComponent(mediaDirectoryName, isDirectory: true)
+            .standardizedFileURL
+        let candidate = mediaDirectory
+            .appendingPathComponent(wallpaper.fileName, isDirectory: false)
+            .standardizedFileURL
+        guard isContained(candidate, in: mediaDirectory) else {
+            throw WallpaperLibraryError.corruptedManifest("Caminho de mídia fora da biblioteca")
+        }
+        return candidate
+    }
+
+    static func ownedThumbnailURL(for wallpaper: Wallpaper, root: URL) throws -> URL {
+        var seen = Set<UUID>()
+        try validateWallpaper(wallpaper, seenIDs: &seen)
+        let thumbnailsDirectory = root
+            .appendingPathComponent(thumbnailsDirectoryName, isDirectory: true)
+            .standardizedFileURL
+        let fileName = "\(wallpaper.id.uuidString).jpg"
+        let candidate = thumbnailsDirectory
+            .appendingPathComponent(fileName, isDirectory: false)
+            .standardizedFileURL
+        guard isContained(candidate, in: thumbnailsDirectory) else {
+            throw WallpaperLibraryError.corruptedManifest("Caminho de miniatura fora da biblioteca")
+        }
+        return candidate
+    }
+
+    private static func isContained(_ file: URL, in directory: URL) -> Bool {
+        let filePath = file.path
+        let directoryPath = directory.path
+        guard filePath.hasPrefix(directoryPath) else { return false }
+        let remainder = filePath.dropFirst(directoryPath.count)
+        guard remainder.first == "/" || remainder.isEmpty else { return false }
+        return true
+    }
+}

@@ -1,56 +1,129 @@
 # Waypaper
 
-Wallpaper de vídeo local para macOS 13+, em Swift/AppKit/AVFoundation, sem dependências externas.
+App de wallpapers de vídeo para macOS 13+, com biblioteca local em SwiftUI, reprodução por monitor em AppKit/AVFoundation e nitidez opcional via Core Image. Sem dependências externas, conta ou servidor.
 
-## Executar
+## Usar
 
-Instale as ferramentas de desenvolvimento da Apple (`xcode-select --install`), se necessário. Na pasta do projeto:
+Abra o app e importe vídeos pelo botão **Importar vídeos** ou arrastando arquivos para a biblioteca. O Waypaper guarda uma cópia em `~/Library/Application Support/Waypaper/media/`; mover o arquivo original não quebra o wallpaper.
+
+1. Selecione um monitor na lateral.
+2. Escolha um wallpaper na biblioteca. As miniaturas são estáticas; **Reproduzir prévia** (ou Espaço) inicia somente o vídeo selecionado.
+3. Clique em **Aplicar ao monitor**.
+4. Em **Neste monitor**, escolha **Preencher** (recorta bordas) ou **Ajustar** (mantém o vídeo inteiro, com barras se necessário), pausa e nitidez.
+5. **Restaurar fundo** remove a janela de vídeo, revelando o wallpaper original do macOS.
+
+O ícone de onda/W na barra de menus abre a biblioteca, importa arquivos, pausa/retoma todos os monitores ou encerra o app. Fechar a janela da biblioteca não encerra os wallpapers; a prévia é pausada ao ocultar/fechar/minimizar a janela. Remover um wallpaper da biblioteca remove suas cópias gerenciadas e suas associações aos monitores, nunca o arquivo original.
+
+### Monitores e energia
+
+- Cada monitor independente tem seu próprio player, loop, wallpaper, pausa, enquadramento e nitidez.
+- As associações são salvas por UUID de monitor e preservadas quando ele é desconectado. A reprodução desconectada é liberada, não transferida para outra tela.
+- Reconectar restaura a associação. Monitores espelhados compartilham o destino de reprodução, sem player duplicado para o espelho.
+- Alterar resolução/escala atualiza a janela e a escala Retina sem reconstruir os players não afetados.
+- Suspensão/desligamento da tela e inatividade de sessão têm bloqueios separados. A retomada nunca desfaz a pausa manual.
+- Com **Reduzir movimento** ativo, a primeira aplicação em um monitor começa pausada.
+- Vídeos são sempre reproduzidos sem áudio. Não há agentes, serviços ou inicialização automática instalados.
+
+### Qualidade
+
+**Nitidez** é um filtro `CIUnsharpMask`, opcional e desligado por padrão. Zero reproduz o vídeo sem composição de filtro. O ajuste não recomprime nem modifica o arquivo; a composição preserva a cadência informada pelo vídeo. A aplicação do filtro pode reiniciar o loop.
+
+Não é super-resolução por IA, nem prova de que o iWallpaper faça enhancement. Pode realçar ruído/halos e aumentar o uso da GPU; compare com **Original** antes de manter uma intensidade alta. O enquadramento e a escala Retina são tratados explicitamente.
+
+## Desenvolvimento
+
+Requer ferramentas de desenvolvimento Apple e Swift 5.9 ou superior:
+
+```sh
+swift run Waypaper
+```
+
+Para importar e aplicar um arquivo diretamente ao primeiro monitor da lista:
 
 ```sh
 swift run Waypaper "himmel-x-frieren-beyond-the-journeys-end-moewalls-com.mp4"
 ```
 
-O app aparece como **Waypaper** na barra de menus, sem ícone no Dock. O menu permite escolher outro vídeo, pausar/retomar e encerrar. `swift run Waypaper` abre o último arquivo escolhido; na primeira execução, abre o seletor de arquivo. O caminho é salvo nas preferências locais, não o vídeo. Mover ou remover o arquivo exige selecioná-lo novamente.
+Passar um arquivo importa uma nova cópia. A preferência antiga `videoPath`, se existir no mesmo domínio de preferências, é importada uma vez quando a biblioteca está vazia. A biblioteca e as associações ficam em `manifest.json` e `displays.json` dentro de `Application Support/Waypaper`. Arquivos de estado corrompidos são reportados e não sobrescritos silenciosamente.
 
-- Reprodução em loop, sem áudio, na tela principal; preenche a tela cortando as bordas quando a proporção difere.
-- Janela abaixo dos ícones do desktop, sem interceptar cliques e sem modificar o wallpaper do sistema. Encerrar remove a janela.
-- Pausa em suspensão/desligamento da tela e quando o macOS notifica a desativação da sessão. Retoma respeitando a pausa manual.
-- Se “Reduzir movimento” estiver ativo ao iniciar, começa pausado; é possível retomar pelo menu.
-- Não instala agentes, serviços ou inicialização automática.
+### Organização
 
-## Distribuir para outro Mac
+```text
+Sources/Waypaper/
+  App/         entrada, ciclo de vida, menu e smoke check integrado
+  Library/     modelo, validação, importação, miniaturas e persistência
+  Playback/    identidade dos monitores, coordenação, sessões e camada de vídeo
+  UI/          biblioteca SwiftUI e prévia AVKit
+  Resources/   ícones PNG e ICNS
+scripts/       empacotamento e conversão do ícone
+```
 
-Para gerar o aplicativo, no Mac de desenvolvimento com Python 3 e as ferramentas da Apple:
+Estado de interface e reprodução é isolado no `@MainActor`. Cópia/análise dos vídeos e geração de miniaturas ocorrem fora do ator principal. Importações são serializadas, canceláveis e publicadas apenas após persistência bem-sucedida. A interface não cria players de desktop: essa responsabilidade pertence a `DisplayCoordinator` e `WallpaperSession`.
+
+## Distribuir: DMG ou ZIP
+
+No Mac de desenvolvimento, com Python 3 e as ferramentas Apple:
 
 ```sh
 python3 scripts/package.py
 ```
 
-O comando compila em release para Apple Silicon (M1/M2/M3 e posteriores), monta o bundle e gera **`dist/Waypaper.zip`**, com assinatura ad hoc. Não inclui vídeos. O destinatário precisa apenas de macOS 13 ou superior, sem Swift, Python ou Xcode instalados.
+Gera **`dist/Waypaper.dmg`** e **`dist/Waypaper.zip`**, versão 1.1.0, compilados em release para Apple Silicon (M1 e posteriores), com recursos SwiftPM, ícone e assinatura ad hoc. Vídeos da biblioteca não fazem parte do pacote.
 
-1. Envie o ZIP por AirDrop.
-2. No outro Mac, descompacte e arraste `Waypaper.app` para **Aplicativos**.
-3. Abra o app e escolha um vídeo local. Mantenha o vídeo em uma pasta fixa.
-4. Se o macOS bloquear por desenvolvedor não verificado, após a tentativa de abertura vá a **Ajustes do Sistema → Privacidade e Segurança → Abrir Mesmo Assim**. Autorize somente o pacote recebido de uma origem confiável; não desative o Gatekeeper.
+Para instalar:
 
-A assinatura ad hoc não é um certificado Developer ID nem notarização. Este pacote é para compartilhamento direto, não para distribuição pública sem avisos. Para atualizar, encerre o app pelo menu e substitua-o pela nova versão. Para remover, encerre e apague o app; não há serviços instalados.
+1. Encerre a versão anterior pelo menu Waypaper.
+2. Abra o DMG e arraste **Waypaper.app** para **Applications/Aplicativos**. Alternativamente, descompacte o ZIP e mova o app.
+3. Abra o aplicativo. Não é necessário instalar Swift, Python ou Xcode no Mac destinatário.
+4. Se o macOS bloquear por desenvolvedor não verificado, após tentar abrir use **Ajustes do Sistema → Privacidade e Segurança → Abrir Mesmo Assim**, apenas para um pacote de origem confiável. Não desative o Gatekeeper.
 
-Verificação do pacote: ZIP extraído, assinatura validada e executável arm64 exercitado com o vídeo local; decodificação, pausa/retomada pelo menu, loop e encerramento passaram. A autorização inicial do Gatekeeper em outro Mac não foi exercitada.
+DMG não substitui Developer ID nem notarização; os avisos de segurança continuam possíveis. Para atualizar, encerre e substitua o app. Para remover, encerre e apague o app; a biblioteca em `Application Support/Waypaper` é mantida até você decidir apagá-la.
+Verificado localmente: build debug e release, assinatura do ZIP extraído, montagem somente leitura do DMG, atalho para Aplicativos e smoke completo executado diretamente do app no DMG. O teste também ocultou temporariamente o bundle de recursos do ambiente de desenvolvimento, confirmando que o app distribuído carrega seus próprios recursos.
+
 
 ## Verificação executável
 
-Com uma sessão gráfica ativa e o vídeo de 21 segundos fornecido:
+Com uma sessão gráfica ativa e um vídeo curto:
 
 ```sh
 swift run Waypaper --smoke-test "himmel-x-frieren-beyond-the-journeys-end-moewalls-com.mp4"
 ```
 
-Abre o wallpaper real, aguarda a camada de vídeo apresentar um frame, aciona pausa/retomada pelo menu, verifica que o tempo parou, aguarda um loop completo e aciona encerramento. Imprime `PASS` para cada etapa; falhas encerram com código 1. Timeout de 90 segundos: use um vídeo curto. Esse modo não salva a seleção de arquivo.
+O check usa uma biblioteca temporária e não altera sua biblioteca real. Exercita importação/cópia, miniatura, reabertura do manifesto, rejeição de arquivo inválido e de caminho inseguro, proteção de manifesto corrompido, cancelamento, reprodução real, pausa, sessões independentes, configuração de monitor desconectado, nitidez/cadência, loop, reconexão simulada e remoção sem apagar o original. Também abre a interface SwiftUI, captura sua janela, aciona a prévia pelo atalho de teclado e verifica a pausa da prévia ao ocultá-la. Imprime `PASS` ou encerra com código 1. A espera de loop tem limite de 90 segundos.
 
-O smoke test passou com o MP4 local (H.264, 3840×2160, 60 fps, 21 s). O caminho de erro para arquivo inexistente também foi exercitado. A captura de desktop não estava disponível no ambiente: Finder, Spaces, Mission Control, bloqueio e suspensão ainda precisam de validação visual/manual. O teste automatizado não prova esses comportamentos.
+**Limite da verificação local:** há apenas uma tela física neste ambiente. Duas sessões reais são exercitadas nessa tela e desconexão/reconexão é simulada via a mesma reconciliação usada pelas notificações do sistema. Dois monitores físicos, hot-plug real, espelhamento, Spaces/Mission Control e bloqueio/suspensão reais precisam de validação nesse hardware. A captura de NSView não comprova a composição final dos planos de vídeo do WindowServer.
 
-## Limites atuais
+Sem detecção de oclusão do wallpaper por outras janelas, política automática de bateria, catálogo remoto ou super-resolução. Cada monitor ativo decodifica seu vídeo; vários vídeos 4K/60 e nitidez aumentam o consumo. Monitores sem UUID ou serial usam identificação transitória e podem exigir nova associação após reconectar/reiniciar.
 
-Somente a tela principal, com enquadramento de preenchimento. Sem catálogo, downloads, detecção de oclusão por outras janelas, política de bateria ou seleção independente por monitor. O vídeo 4K/60 continua sendo decodificado enquanto ativo, mesmo atrás de outras janelas.
+## Identidade visual
 
-Arquivos de mídia locais e artefatos de compilação são ignorados pelo Git. O app não concede direitos de uso ou redistribuição dos vídeos importados; o arquivo de referência não é um recurso distribuído pelo projeto.
+O ícone foi gerado com a ferramenta integrada **image_gen**, acionada pela CLI do Codex com a skill `imagegen`, sem fallback de API ou chave externa. A arte hero existente foi preservada.
+
+- Master gerado: `assets/images/waypaper-app-icon-master.png`.
+- Ícones do aplicativo: `Sources/Waypaper/Resources/AppIcon.png` e `AppIcon.icns`.
+- Ícone monocromático da barra: desenho nativo em `AppIdentity`, adaptado ao tema do sistema.
+
+O master original permanece intacto; os derivados recebem transparência fora do quadrado arredondado. Para regenerar os derivados:
+
+```sh
+python3 scripts/make_app_icon.py --mask-from assets/images/waypaper-app-icon-master.png
+```
+
+Prompt visual enviado ao Codex/imagegen (a imagem hero foi fornecida como referência):
+
+```text
+Use the built-in imagegen skill and built-in image_gen tool only (NOT CLI fallback, NOT OPENAI_API_KEY). Generate exactly one macOS app icon master image.
+
+Use case: logo-brand
+Asset type: macOS app icon master (1024x1024 PNG)
+Primary request: Simple stylized letter W formed by a smooth flowing wave ribbon; minimal geometric mark readable at 16px; no text labels, no wordmarks, no wallpaper scene
+Input images: Image 1: reference for aurora teal/cyan/violet palette and soft glow mood only — do not copy the full hero composition
+Style/medium: flat vector-like illustration, crisp edges, subtle inner glow
+Composition/framing: centered mark on rounded-square app-icon canvas with comfortable padding; square 1:1
+Lighting/mood: soft aurora glow on dark blue-violet background
+Color palette: teal, cyan, violet accents on deep indigo base (inspired by reference)
+Constraints: must read as W+wave at small sizes; no photographs; no UI chrome; no watermark
+Avoid: busy wallpaper imagery, tiny illegible detail, text, dock mockups
+```
+
+Arquivos de vídeo e artefatos de compilação/distribuição são ignorados pelo Git. O aplicativo não concede direitos de uso ou redistribuição das mídias importadas.

@@ -4,5 +4,5 @@ import PackageDescription
 let package = Package(
     name: "Waypaper",
     platforms: [.macOS(.v13)],
-    targets: [.executableTarget(name: "Waypaper")]
+    targets: [.executableTarget(name: "Waypaper", resources: [.process("Resources")])]
 )
