@@ -115,23 +115,23 @@ The interface manages the library; the coordinator determines what each display 
 
 ```mermaid
 flowchart TD
-    App["AppDelegate · lifecycle and menu bar"] --> UI["LibraryView · SwiftUI interface"]
-    UI --> Library["WallpaperLibrary · import and library"]
-    UI --> Coordinator["DisplayCoordinator · per-display settings"]
-    Library --> Files["Local disk · media, thumbnails, and manifest"]
-    Coordinator --> Settings["displays.json · assignments and settings"]
-    OS["macOS · displays, sleep, and session"] --> Coordinator
-    Coordinator --> Session["WallpaperSession · one per display"]
-    Session --> Resolve["WallpaperLibrary · resolve playback file"]
+    App["AppDelegate<br/>Lifecycle and menu bar"] --> UI["LibraryView<br/>SwiftUI interface"]
+    UI --> Library["WallpaperLibrary<br/>Import and library"]
+    UI --> Coordinator["DisplayCoordinator<br/>Per-display settings"]
+    Library --> Files["Local disk<br/>Media, thumbnails,<br/>and manifest"]
+    Coordinator --> Settings["displays.json<br/>Assignments and settings"]
+    OS["macOS<br/>Displays, sleep,<br/>and session"] --> Coordinator
+    Coordinator --> Session["WallpaperSession<br/>One per display"]
+    Session --> Resolve["WallpaperLibrary<br/>Resolve playback file"]
     Resolve --> Choice{"Sharpness enabled?"}
     Choice -->|No| Original["Original imported copy"]
     Choice -->|Yes| Cache{"Existing variant?"}
     Cache -->|Yes| Variant["Variant on disk"]
-    Cache -->|No| Render["WallpaperVariantRenderer · Core Image + export"]
+    Cache -->|No| Render["WallpaperVariantRenderer<br/>Core Image + export"]
     Render --> Variant
-    Original --> Player["AVQueuePlayer + AVPlayerLooper"]
+    Original --> Player["AVQueuePlayer<br/>+ AVPlayerLooper"]
     Variant --> Player
-    Player --> Desktop["AVPlayerLayer · AppKit window behind desktop icons"]
+    Player --> Desktop["AVPlayerLayer<br/>AppKit window<br/>behind desktop icons"]
 ```
 
 ### Code responsibilities

@@ -113,23 +113,23 @@ A interface organiza a biblioteca; o coordenador decide o que cada monitor repro
 
 ```mermaid
 flowchart TD
-    App["AppDelegate · ciclo de vida e barra de menus"] --> UI["LibraryView · interface SwiftUI"]
-    UI --> Library["WallpaperLibrary · importação e biblioteca"]
-    UI --> Coordinator["DisplayCoordinator · configurações por monitor"]
-    Library --> Files["Disco local · mídia, miniaturas e manifesto"]
-    Coordinator --> Settings["displays.json · associações e ajustes"]
-    OS["macOS · telas, suspensão e sessão"] --> Coordinator
-    Coordinator --> Session["WallpaperSession · uma por monitor"]
-    Session --> Resolve["WallpaperLibrary · resolver arquivo de reprodução"]
+    App["AppDelegate<br/>Ciclo de vida<br/>e barra de menus"] --> UI["LibraryView<br/>Interface SwiftUI"]
+    UI --> Library["WallpaperLibrary<br/>Importação e biblioteca"]
+    UI --> Coordinator["DisplayCoordinator<br/>Ajustes por monitor"]
+    Library --> Files["Disco local<br/>Mídia, miniaturas<br/>e manifesto"]
+    Coordinator --> Settings["displays.json<br/>Associações e ajustes"]
+    OS["macOS<br/>Telas, suspensão<br/>e sessão"] --> Coordinator
+    Coordinator --> Session["WallpaperSession<br/>Uma por monitor"]
+    Session --> Resolve["WallpaperLibrary<br/>Resolver arquivo<br/>de reprodução"]
     Resolve --> Choice{"Nitidez ativa?"}
     Choice -->|Não| Original["Cópia original importada"]
     Choice -->|Sim| Cache{"Variante existente?"}
     Cache -->|Sim| Variant["Variante em disco"]
-    Cache -->|Não| Render["WallpaperVariantRenderer · Core Image + exportação"]
+    Cache -->|Não| Render["WallpaperVariantRenderer<br/>Core Image + exportação"]
     Render --> Variant
-    Original --> Player["AVQueuePlayer + AVPlayerLooper"]
+    Original --> Player["AVQueuePlayer<br/>+ AVPlayerLooper"]
     Variant --> Player
-    Player --> Desktop["AVPlayerLayer · janela AppKit atrás dos ícones"]
+    Player --> Desktop["AVPlayerLayer<br/>Janela AppKit<br/>atrás dos ícones"]
 ```
 
 ### Responsabilidades no código
