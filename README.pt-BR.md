@@ -72,7 +72,11 @@ Os controles em **Neste monitor** afetam o wallpaper aplicado à tela selecionad
 
 ## O app na prática
 
-A captura no início mostra a biblioteca real: **monitores à esquerda**, **vídeos no centro** e **prévia e ajustes à direita**.
+<p align="center">
+  <img src="assets/images/waypaper-demo.gif" width="720" alt="Biblioteca do Waypaper sobre um wallpaper animado de teste, capturada no smoke check">
+</p>
+
+A captura no início mostra a biblioteca real: **monitores à esquerda**, **vídeos no centro** e **prévia e ajustes à direita**. O GIF acima usa a mesma interface capturada pelo smoke check, sobre um clipe sintético que sugere a reprodução no desktop.
 
 ### Prévia antes de aplicar
 
@@ -199,11 +203,33 @@ O script compila em **release para arm64**, inclui os recursos, assina o app ad 
 
 ```text
 dist/
+├── Waypaper.app    # bundle assinado (para testes locais)
 ├── Waypaper.dmg    # app + atalho para Aplicativos
 └── Waypaper.zip    # aplicativo compactado
 ```
 
 Os vídeos da sua biblioteca não entram no pacote. Para distribuir alterações recentes, gere os pacotes novamente; um build de desenvolvimento não atualiza um DMG já existente.
+
+### Releases no GitHub
+
+Ao enviar uma tag de versão, o GitHub Actions gera **Waypaper.dmg** e **Waypaper.zip** (Apple Silicon, macOS 13+) e anexa na [Release](../../releases). A versão do bundle vem da tag (`v1.2.0` → `1.2.0`).
+
+```sh
+git tag v1.1.0
+git push origin v1.1.0
+```
+
+Variáveis opcionais ao empacotar localmente: `WAYPAPER_VERSION` (versão de marketing) e `WAYPAPER_BUILD` (número gravado em `CFBundleVersion`).
+
+### GIF de demonstração para o README
+
+Com ffmpeg e uma sessão gráfica ativa:
+
+```sh
+python3 scripts/render_demo.py
+```
+
+O script roda o smoke check, captura a janela real da biblioteca e grava `assets/images/waypaper-demo.gif` sobre um clipe animado sintético. Para gravar a tela (requer permissão de Gravação de Tela no terminal), use `./scripts/record_demo.sh`.
 
 ### Verificar o fluxo completo
 

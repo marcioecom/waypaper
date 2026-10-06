@@ -74,7 +74,11 @@ The controls under **Neste monitor** (On this display) affect the wallpaper appl
 
 ## The app in action
 
-The screenshot at the top shows the real library: **displays on the left**, **videos in the center**, and **preview and settings on the right**.
+<p align="center">
+  <img src="assets/images/waypaper-demo.gif" width="720" alt="Waypaper library over an animated test wallpaper captured during the smoke check">
+</p>
+
+The screenshot at the top shows the real library: **displays on the left**, **videos in the center**, and **preview and settings on the right**. The GIF above uses the same interface captured by the smoke check, composited over a synthetic clip to suggest desktop playback.
 
 ### Preview before applying
 
@@ -143,7 +147,7 @@ flowchart TD
 | [`Library/`](Sources/Waypaper/Library/) | Validation, video copying, thumbnails, persistence, and sharpness variants. |
 | [`Playback/`](Sources/Waypaper/Playback/) | Display identity, coordination, sessions, windows, and video layer. |
 | [`Resources/`](Sources/Waypaper/Resources/) | Application icons. |
-| [`scripts/`](scripts/) | Packaging and icon generation. |
+| [`scripts/`](scripts/) | Packaging, icons, demo GIF, and screen recording helpers. |
 
 UI state and playback coordination use `@MainActor`. Video copying/analysis and thumbnail generation run outside the main actor. Imports are serialized and cancellable; they appear in the library only after successful persistence.
 
@@ -201,11 +205,33 @@ The script builds in **release mode for arm64**, bundles resources, signs the ap
 
 ```text
 dist/
+├── Waypaper.app    # signed application bundle (for local testing)
 ├── Waypaper.dmg    # app + Applications shortcut
 └── Waypaper.zip    # compressed application
 ```
 
 Your library's videos are not included in the package. To distribute recent changes, regenerate the packages; a development build does not update an existing DMG.
+
+### GitHub Releases
+
+Pushing a version tag builds **Waypaper.dmg** and **Waypaper.zip** on GitHub Actions (Apple Silicon, macOS 13+) and attaches them to a [GitHub Release](../../releases). The bundle version comes from the tag (`v1.2.0` → `1.2.0`).
+
+```sh
+git tag v1.1.0
+git push origin v1.1.0
+```
+
+Optional environment variables when packaging locally: `WAYPAPER_VERSION` (marketing version) and `WAYPAPER_BUILD` (build number written to `CFBundleVersion`).
+
+### Demo GIF for the README
+
+With ffmpeg and an active graphical session:
+
+```sh
+python3 scripts/render_demo.py
+```
+
+This runs the smoke check, captures the real library window, and writes `assets/images/waypaper-demo.gif` over a synthetic animated wallpaper clip. For a screen recording instead (requires Screen Recording permission for your terminal), use `./scripts/record_demo.sh`.
 
 ### Check the complete workflow
 

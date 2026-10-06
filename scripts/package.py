@@ -1,10 +1,21 @@
 #!/usr/bin/env python3
 """Build an ad-hoc signed macOS app, ZIP, and DMG using Apple tools and the stdlib."""
+import os
 import plistlib
 import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+
+
+def bundle_versions() -> tuple[str, str]:
+    short = os.environ.get("WAYPAPER_VERSION", "1.1.0").strip()
+    build = os.environ.get("WAYPAPER_BUILD", "2").strip()
+    if not short:
+        raise SystemExit("WAYPAPER_VERSION must not be empty")
+    if not build:
+        raise SystemExit("WAYPAPER_BUILD must not be empty")
+    return short, build
 
 
 def swift_binary_directory(root: Path) -> Path:
@@ -51,6 +62,7 @@ def assemble_app(root: Path, binary_directory: Path, staging_app: Path) -> None:
     if app_icon_icns.is_file():
         shutil.copy2(app_icon_icns, resources / "AppIcon.icns")
 
+    short_version, build_version = bundle_versions()
     info: dict[str, object] = {
         "CFBundleDevelopmentRegion": "pt_BR",
         "CFBundleDisplayName": "Waypaper",
@@ -59,8 +71,8 @@ def assemble_app(root: Path, binary_directory: Path, staging_app: Path) -> None:
         "CFBundleIdentifier": "dev.waypaper.app",
         "CFBundleInfoDictionaryVersion": "6.0",
         "CFBundlePackageType": "APPL",
-        "CFBundleShortVersionString": "1.1.0",
-        "CFBundleVersion": "2",
+        "CFBundleShortVersionString": short_version,
+        "CFBundleVersion": build_version,
         "LSMinimumSystemVersion": "13.0",
         "LSUIElement": True,
         "NSHighResolutionCapable": True,
@@ -121,13 +133,19 @@ def main() -> None:
 
     binary_directory = swift_binary_directory(root)
 
+    app_output = dist / "Waypaper.app"
+    if app_output.exists():
+        shutil.rmtree(app_output)
+
     with tempfile.TemporaryDirectory(prefix="waypaper-package-") as temporary:
         app = Path(temporary) / "Waypaper.app"
         assemble_app(root, binary_directory, app)
+        shutil.copytree(app, app_output, symlinks=True)
         write_zip(app, zip_output)
         write_dmg(app, dmg_output)
 
     bundle_names = [path.name for path in resource_bundles(binary_directory)]
+    print(f"Ready: {app_output}")
     print(f"Ready: {zip_output}")
     print(f"Ready: {dmg_output}")
     print(f"SwiftPM resource bundles packaged under Contents/Resources/: {', '.join(bundle_names)}")
