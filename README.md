@@ -7,10 +7,13 @@
 <h1 align="center">Waypaper</h1>
 
 <p align="center"><strong>Your desktop, in motion.</strong><br>
-Turn your videos into animated wallpapers on macOS.<br>
-A local library, per-display settings, and a native interface. No account, no cloud.</p>
+Turn your videos into animated wallpapers on macOS. Local library, per-display settings, native interface. No account, no cloud.</p>
 
-<p align="center">macOS 13+ · Apple Silicon · Swift + SwiftUI · AVFoundation · No external dependencies</p>
+<p align="center">
+  <a href="https://github.com/marcioecom/waypaper/releases/latest/download/Waypaper.dmg"><strong>⬇ Download Waypaper.dmg</strong></a>
+</p>
+
+<p align="center"><sub>macOS 13 or later · Apple Silicon (M1 and later) · Intel Macs are not supported</sub></p>
 
 <p align="center">
   <a href="#start-here">Start here</a> ·
@@ -18,11 +21,6 @@ A local library, per-display settings, and a native interface. No account, no cl
   <a href="#how-it-works">Architecture</a> ·
   <a href="#development">Development</a> ·
   <a href="#quick-answers">FAQ</a>
-</p>
-
-<p align="center">
-  <a href="https://github.com/marcioecom/waypaper/releases/latest/download/Waypaper.dmg"><strong>⬇ Download Waypaper.dmg</strong></a><br>
-  macOS 13 or later · Apple Silicon (M1 and later) · Intel Macs are not supported
 </p>
 
 ## First launch
