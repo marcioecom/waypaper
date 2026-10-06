@@ -19,6 +19,33 @@ private final class ExportSessionBox: @unchecked Sendable {
     private let session: AVAssetExportSession
     init(_ session: AVAssetExportSession) { self.session = session }
     func cancel() { session.cancelExport() }
+
+    /// Uses `exportAsynchronously` so CI builds on macOS 13+ (GitHub `macos-14` runners).
+    func export() async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            session.exportAsynchronously { [box = self] in
+                box.resume(continuation)
+            }
+        }
+    }
+
+    private func resume(_ continuation: CheckedContinuation<Void, Error>) {
+        switch session.status {
+        case .completed:
+            continuation.resume()
+        case .cancelled:
+            continuation.resume(throwing: CancellationError())
+        case .failed:
+            let message = session.error?.localizedDescription ?? "Exportação falhou."
+            continuation.resume(throwing: WallpaperVariantRenderer.RenderError.exportFailed(message))
+        default:
+            continuation.resume(
+                throwing: WallpaperVariantRenderer.RenderError.exportFailed(
+                    "Exportação terminou em estado inesperado."
+                )
+            )
+        }
+    }
 }
 
 enum WallpaperVariantRenderer {
@@ -78,10 +105,12 @@ enum WallpaperVariantRenderer {
         // AVAssetExportSession is NS_SWIFT_NONSENDABLE but only ever touched here, serially,
         // from this async context and the cancellation handler below; box it to satisfy the
         // @Sendable closure requirement without unsafely sharing mutable state across threads.
+        exportSession.outputURL = tempURL
+
         let box = ExportSessionBox(exportSession)
         do {
             try await withTaskCancellationHandler {
-                try await exportSession.export(to: tempURL, as: .mp4)
+                try await box.export()
             } onCancel: {
                 box.cancel()
             }
