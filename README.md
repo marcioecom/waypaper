@@ -1,122 +1,260 @@
-# Waypaper
+<p align="center">
+  <img src="Sources/Waypaper/Resources/AppIcon.png" width="112" alt="Ícone do Waypaper: um W em forma de onda">
+</p>
 
-App de wallpapers de vídeo para macOS 13+, com biblioteca local em SwiftUI, reprodução por monitor em AppKit/AVFoundation e nitidez opcional via Core Image. Sem dependências externas, conta ou servidor.
+<h1 align="center">Waypaper</h1>
 
-## Usar
+<p align="center"><strong>Seu desktop, em movimento.</strong><br>
+Transforme seus vídeos em wallpapers animados no macOS.<br>
+Biblioteca local, ajustes por monitor e uma interface nativa. Sem conta, sem nuvem.</p>
 
-Abra o app e importe vídeos pelo botão **Importar vídeos** ou arrastando arquivos para a biblioteca. O Waypaper guarda uma cópia em `~/Library/Application Support/Waypaper/media/`; mover o arquivo original não quebra o wallpaper.
+<p align="center">macOS 13+ · Swift + SwiftUI · AVFoundation · Sem dependências externas</p>
 
-1. Selecione um monitor na lateral.
-2. Escolha um wallpaper na biblioteca. As miniaturas são estáticas; **Reproduzir prévia** (ou Espaço) inicia somente o vídeo selecionado.
-3. Clique em **Aplicar ao monitor**.
-4. Em **Neste monitor**, escolha **Preencher** (recorta bordas) ou **Ajustar** (mantém o vídeo inteiro, com barras se necessário), pausa e nitidez.
-5. **Restaurar fundo** remove a janela de vídeo, revelando o wallpaper original do macOS.
+<p align="center">
+  <a href="#comece-aqui">Comece aqui</a> ·
+  <a href="#o-app-na-prática">Capturas</a> ·
+  <a href="#como-funciona">Arquitetura</a> ·
+  <a href="#desenvolvimento">Desenvolvimento</a> ·
+  <a href="#dúvidas-rápidas">Dúvidas</a>
+</p>
 
-O ícone de onda/W na barra de menus abre a biblioteca, importa arquivos, pausa/retoma todos os monitores ou encerra o app. Fechar a janela da biblioteca não encerra os wallpapers; a prévia é pausada ao ocultar/fechar/minimizar a janela. Remover um wallpaper da biblioteca remove suas cópias gerenciadas e suas associações aos monitores, nunca o arquivo original.
+![Biblioteca do Waypaper com seleção de monitor, wallpaper importado, prévia e ajustes de reprodução](assets/images/waypaper-library.jpg)
 
-O Waypaper é um app de barra de menus (`LSUIElement`): sem janela aberta, não há ícone no Dock nem alternância por Cmd-Tab. Assim que a biblioteca é exibida, o ícone aparece no Dock (e pode ser minimizado normalmente); fechar a janela volta ao modo discreto só na barra de menus.
+## O que você pode fazer
+
+- **Usar seus próprios vídeos.** Importe pelo botão ou arraste arquivos para a biblioteca.
+- **Escolher um wallpaper por monitor.** Cada tela independente tem seu próprio vídeo, enquadramento, pausa e nitidez.
+- **Conferir antes de aplicar.** Miniaturas estáticas e prévia sob demanda — a biblioteca não reproduz todos os vídeos ao mesmo tempo.
+- **Ajustar o visual.** Preencha a tela ou preserve o quadro inteiro; adicione nitidez se quiser.
+- **Fechar a biblioteca e continuar usando.** O app fica na barra de menus e o wallpaper continua em loop, sem áudio.
+- **Voltar ao fundo do macOS.** Um clique em **Restaurar fundo**, sem apagar sua biblioteca.
+
+## Comece aqui
+
+### 1. Instale o aplicativo
+
+Você precisa de **macOS 13 ou superior**. Os pacotes gerados pelo projeto são para **Apple Silicon — M1 e posteriores**.
+
+Se você recebeu um `Waypaper.dmg` ou `Waypaper.zip`:
+
+1. Abra o DMG e arraste **Waypaper.app** para **Aplicativos**. Se for ZIP, descompacte e mova o app para essa pasta.
+2. Abra **Waypaper** em Aplicativos.
+3. Se o macOS bloquear a abertura, vá a **Ajustes do Sistema → Privacidade e Segurança → Abrir Mesmo Assim**, depois de tentar abrir o app e somente se confiar na origem do pacote.
+
+> Os pacotes usam assinatura **ad hoc**, sem Developer ID ou notarização. Não desative o Gatekeeper. No Mac que vai usar o app, não é necessário instalar Swift, Python ou Xcode.
+
+**Só tem o código-fonte?** Veja [como executar](#desenvolvimento) ou [gerar um DMG/ZIP](#gerar-dmg-e-zip). Vídeos não acompanham o aplicativo: use arquivos que você tenha direito de utilizar.
+
+### 2. Coloque seu primeiro wallpaper
+
+1. Clique em **Importar vídeos** ou arraste um vídeo para a biblioteca.
+2. Selecione o **monitor** na lateral esquerda.
+3. Clique na miniatura do vídeo.
+4. Opcional: clique em **Reproduzir prévia** ou pressione **Espaço** para conferir o vídeo selecionado.
+5. Clique em **Aplicar ao monitor**.
+
+Pronto. Você pode fechar a janela da biblioteca; o vídeo continua no desktop. Para abrir a biblioteca novamente, use o ícone de onda/W na barra de menus.
+
+### 3. Ajuste do seu jeito
+
+Os controles em **Neste monitor** afetam o wallpaper aplicado à tela selecionada.
+
+| Controle | O que acontece |
+| --- | --- |
+| **Preencher** | Ocupa a tela inteira; pode recortar as bordas do vídeo. |
+| **Ajustar** | Mostra o vídeo inteiro; pode deixar barras quando as proporções forem diferentes. |
+| **Nitidez** | Realça contornos em uma cópia processada do vídeo. Zero usa a cópia original, sem filtro. |
+| **Pausar / Retomar** | Controla a reprodução naquele monitor. |
+| **Restaurar fundo** | Retira o vídeo e revela o wallpaper original do macOS. |
+| **Remover da biblioteca…** | Apaga as cópias gerenciadas e desfaz as associações aos monitores. Não apaga seu arquivo de origem. |
+
+## O app na prática
+
+A captura no início mostra a biblioteca real: **monitores à esquerda**, **vídeos no centro** e **prévia e ajustes à direita**.
+
+### Prévia antes de aplicar
+
+<p align="center">
+  <img src="assets/images/waypaper-preview.jpg" width="430" alt="Detalhe da interface real: prévia do vídeo, resolução, duração e botão Reaplicar ao monitor">
+</p>
+
+*Recorte da mesma captura, mostrando a prévia e a aplicação ao monitor. O vídeo ilustrado não está incluído no projeto.*
+
+A prévia é independente do wallpaper: começa somente quando solicitada e pausa ao ocultar, minimizar ou fechar a biblioteca. Ela mostra o vídeo importado; o ajuste de nitidez pertence à reprodução no monitor.
+
+### Discreto quando você não precisa da janela
+
+- **Biblioteca aberta:** o Waypaper aparece no Dock e pode ser minimizado normalmente.
+- **Biblioteca fechada:** continua na barra de menus, sem ícone no Dock ou entrada no Cmd-Tab.
+- **Barra de menus:** abre a biblioteca, importa vídeos, pausa/retoma todos os monitores ou encerra o app.
+
+## Nitidez sem filtro a cada quadro
+
+A nitidez é opcional e vem desligada. Ao escolher um nível pela primeira vez, o Waypaper usa **Core Image (`CIUnsharpMask`)** para exportar uma cópia com o efeito já aplicado. A interface mostra **Preparando nitidez…** durante esse processamento.
+
+Depois, o player reproduz o arquivo resultante normalmente, **sem aplicar o filtro em tempo real**. Se você voltar a um nível já preparado, a biblioteca reutiliza a cópia existente.
+
+| Situação | Comportamento |
+| --- | --- |
+| Nitidez em zero | Reproduz a cópia original importada. |
+| Novo nível de nitidez | Processa e salva uma variante antes de reproduzi-la. |
+| Nível já preparado | Reutiliza a variante em disco. |
+| Vídeo removido da biblioteca | Remove também suas variantes. |
+
+**O custo dessa escolha:** a primeira preparação leva tempo e as variantes ocupam espaço adicional. Os valores são agrupados em **10 faixas de 10%**, então posições próximas do controle podem usar a mesma variante. O arquivo de origem e a cópia original importada não são modificados.
+
+Nitidez não é super-resolução por IA e pode acentuar ruído ou halos. A variante passa por uma nova codificação; não há promessa de exportação sem perdas ou de consumo idêntico ao arquivo original. CPU, GPU e memória dependem do vídeo, do hardware e da quantidade de monitores ativos.
+
+## Como funciona
+
+A interface organiza a biblioteca; o coordenador decide o que cada monitor reproduz. Cada tela independente recebe uma sessão de reprodução nativa.
+
+```mermaid
+flowchart TD
+    App["AppDelegate · ciclo de vida e barra de menus"] --> UI["LibraryView · interface SwiftUI"]
+    UI --> Library["WallpaperLibrary · importação e biblioteca"]
+    UI --> Coordinator["DisplayCoordinator · configurações por monitor"]
+    Library --> Files["Disco local · mídia, miniaturas e manifesto"]
+    Coordinator --> Settings["displays.json · associações e ajustes"]
+    OS["macOS · telas, suspensão e sessão"] --> Coordinator
+    Coordinator --> Session["WallpaperSession · uma por monitor"]
+    Session --> Resolve["WallpaperLibrary · resolver arquivo de reprodução"]
+    Resolve --> Choice{"Nitidez ativa?"}
+    Choice -->|Não| Original["Cópia original importada"]
+    Choice -->|Sim| Cache{"Variante existente?"}
+    Cache -->|Sim| Variant["Variante em disco"]
+    Cache -->|Não| Render["WallpaperVariantRenderer · Core Image + exportação"]
+    Render --> Variant
+    Original --> Player["AVQueuePlayer + AVPlayerLooper"]
+    Variant --> Player
+    Player --> Desktop["AVPlayerLayer · janela AppKit atrás dos ícones"]
+```
+
+### Responsabilidades no código
+
+| Pasta | Responsabilidade |
+| --- | --- |
+| [`App/`](Sources/Waypaper/App/) | Entrada, ciclo de vida, janela, menu e smoke check integrado. |
+| [`UI/`](Sources/Waypaper/UI/) | Biblioteca SwiftUI e prévia com AVKit. |
+| [`Library/`](Sources/Waypaper/Library/) | Validação, cópia dos vídeos, miniaturas, persistência e variantes de nitidez. |
+| [`Playback/`](Sources/Waypaper/Playback/) | Identidade dos monitores, coordenação, sessões, janelas e camada de vídeo. |
+| [`Resources/`](Sources/Waypaper/Resources/) | Ícones do aplicativo. |
+| [`scripts/`](scripts/) | Empacotamento e geração dos ícones. |
+
+Estado da interface e coordenação da reprodução usam `@MainActor`. Cópia/análise dos vídeos e geração de miniaturas acontecem fora do ator principal. Importações são serializadas e canceláveis; só aparecem na biblioteca após persistência bem-sucedida.
 
 ### Monitores e energia
 
-- Cada monitor independente tem seu próprio player, loop, wallpaper, pausa, enquadramento e nitidez.
-- As associações são salvas por UUID de monitor e preservadas quando ele é desconectado. A reprodução desconectada é liberada, não transferida para outra tela.
-- Reconectar restaura a associação. Monitores espelhados compartilham o destino de reprodução, sem player duplicado para o espelho.
-- Alterar resolução/escala atualiza a janela e a escala Retina sem reconstruir os players não afetados.
-- Suspensão/desligamento da tela e inatividade de sessão têm bloqueios separados. A retomada nunca desfaz a pausa manual.
+- As associações são salvas por identidade do monitor. Desconectar libera a sessão de reprodução, mas preserva seus ajustes para a reconexão.
+- Monitores espelhados não recebem um player duplicado para o espelho.
+- Mudanças de resolução ou escala atualizam a janela e a escala Retina.
+- Suspensão da tela e inatividade de sessão têm bloqueios separados; retomar não desfaz uma pausa manual.
+- A reprodução pausa quando o macOS informa que a janela do wallpaper está totalmente oculta e retoma quando ela volta a ficar visível.
 - Com **Reduzir movimento** ativo, a primeira aplicação em um monitor começa pausada.
-- Vídeos são sempre reproduzidos sem áudio. Não há agentes, serviços ou inicialização automática instalados.
-- Quando a janela do wallpaper fica totalmente oculta (outro app em tela cheia cobrindo a tela inteira, por exemplo), a decodificação/composição desse monitor é pausada automaticamente; volta assim que algo fica visível. Isso é independente da pausa manual.
 
-### Qualidade
+Não há política automática de bateria, inicialização automática instalada, catálogo remoto ou serviço em segundo plano separado do app. Cada monitor visível reproduz seu próprio vídeo; vários vídeos 4K simultâneos aumentam o consumo.
 
-**Nitidez** é um filtro `CIUnsharpMask`, opcional e desligado por padrão. Zero reproduz o vídeo original, sem nenhum processamento. O ajuste nunca modifica o arquivo importado.
+## Seus arquivos ficam no seu Mac
 
-Não é super-resolução por IA, nem prova de que o iWallpaper faça enhancement. Pode realçar ruído/halos e aumentar o uso da GPU durante o processamento inicial; compare com **Original** antes de manter uma intensidade alta. O enquadramento e a escala Retina são tratados explicitamente.
+```text
+~/Library/Application Support/Waypaper/
+├── manifest.json    # biblioteca e metadados
+├── displays.json    # wallpaper e ajustes de cada monitor
+├── media/           # cópias dos vídeos importados
+├── thumbnails/      # miniaturas estáticas
+└── variants/        # cópias com nitidez, organizadas por vídeo
+```
 
-**Como a nitidez é aplicada (e por que não é em tempo real)**: a primeira abordagem compunha o filtro quadro a quadro durante a própria reprodução (`AVMutableVideoComposition` + `CIUnsharpMask` no `AVPlayerItem`). Medido com `sample` em uso real (vídeo 4K/60): nitidez 100% = 66% CPU / 1,5 GB RAM contra 3,5% CPU / 79 MB RAM com nitidez 0%, com o custo dominado por uma chamada síncrona de `CIContext.render` por quadro (`CI::RenderTask::waitUntilCompleted`, ~76% das amostras do compositor). Limitar a composição a 30 fps não reduziu esse consumo e ainda piorou a fluidez a 60 fps, então essa abordagem foi abandonada.
+Mover ou apagar o arquivo de origem depois da importação não quebra o wallpaper: o app usa sua própria cópia. Arquivos de estado corrompidos são reportados, não sobrescritos silenciosamente.
 
-A biblioteca já guarda uma cópia do vídeo original (`media/`); quando a nitidez é ligada, a mesma composição `CIUnsharpMask` é usada apenas para **gravar uma vez** uma cópia derivada em `variants/<id>/sharp-<nível>.<ext>` (`WallpaperVariantRenderer`, via `AVAssetExportSession`). Essa cópia derivada é reproduzida depois como qualquer outro vídeo — decodificação direta por hardware, sem composição em tempo real —, então o custo de CPU/RAM em reprodução volta a ser o mesmo de nitidez 0%, independentemente do nível escolhido. O nível é arredondado em 10 faixas (10% em 10%) para não gerar um arquivo por posição do slider; trocar de faixa reaproveita o arquivo já gerado. O processamento inicial roda em segundo plano (indicador "Preparando nitidez…" na interface) e é proporcional à duração do vídeo; o arquivo original em `media/` nunca é alterado. Remover um wallpaper da biblioteca também apaga suas variantes.
+Para atualizar, encerre o Waypaper pelo menu e substitua o aplicativo. Para desinstalar, encerre e remova o app; a biblioteca acima permanece no disco. Apague essa pasta somente se também quiser descartar os vídeos importados e as configurações.
 
 ## Desenvolvimento
 
-Requer ferramentas de desenvolvimento Apple e Swift 5.9 ou superior:
+Requer macOS, ferramentas de desenvolvimento Apple e **Swift 5.9 ou superior**. Execute os comandos na raiz do repositório.
 
 ```sh
 swift run Waypaper
 ```
 
-Para importar e aplicar um arquivo diretamente ao primeiro monitor da lista:
+Para importar um vídeo e aplicá-lo diretamente ao primeiro monitor da lista:
 
 ```sh
-swift run Waypaper "himmel-x-frieren-beyond-the-journeys-end-moewalls-com.mp4"
+swift run Waypaper "/caminho/para/seu-video.mp4"
 ```
 
-Passar um arquivo importa uma nova cópia. A preferência antiga `videoPath`, se existir no mesmo domínio de preferências, é importada uma vez quando a biblioteca está vazia. A biblioteca e as associações ficam em `manifest.json` e `displays.json` dentro de `Application Support/Waypaper`. Arquivos de estado corrompidos são reportados e não sobrescritos silenciosamente.
+Substitua o caminho pelo de um arquivo existente. Cada execução com um arquivo importa uma nova cópia. Se a preferência legada `videoPath` existir no mesmo domínio de preferências, ela é importada uma vez quando a biblioteca está vazia.
 
-### Organização
+### Gerar DMG e ZIP
 
-```text
-Sources/Waypaper/
-  App/         entrada, ciclo de vida, menu e smoke check integrado
-  Library/     modelo, validação, importação, miniaturas, persistência e variantes com nitidez pré-processada
-  Playback/    identidade dos monitores, coordenação, sessões e camada de vídeo
-  UI/          biblioteca SwiftUI e prévia AVKit
-  Resources/   ícones PNG e ICNS
-scripts/       empacotamento e conversão do ícone
-```
-
-Estado de interface e reprodução é isolado no `@MainActor`. Cópia/análise dos vídeos e geração de miniaturas ocorrem fora do ator principal. Importações são serializadas, canceláveis e publicadas apenas após persistência bem-sucedida. A interface não cria players de desktop: essa responsabilidade pertence a `DisplayCoordinator` e `WallpaperSession`.
-
-## Distribuir: DMG ou ZIP
-
-No Mac de desenvolvimento, com Python 3 e as ferramentas Apple:
+Com Python 3 e as ferramentas Apple instalados:
 
 ```sh
 python3 scripts/package.py
 ```
 
-Gera **`dist/Waypaper.dmg`** e **`dist/Waypaper.zip`**, versão 1.1.0, compilados em release para Apple Silicon (M1 e posteriores), com recursos SwiftPM, ícone e assinatura ad hoc. Vídeos da biblioteca não fazem parte do pacote.
+O script compila em **release para arm64**, inclui os recursos, assina o app ad hoc e gera:
 
-Para instalar:
-
-1. Encerre a versão anterior pelo menu Waypaper.
-2. Abra o DMG e arraste **Waypaper.app** para **Applications/Aplicativos**. Alternativamente, descompacte o ZIP e mova o app.
-3. Abra o aplicativo. Não é necessário instalar Swift, Python ou Xcode no Mac destinatário.
-4. Se o macOS bloquear por desenvolvedor não verificado, após tentar abrir use **Ajustes do Sistema → Privacidade e Segurança → Abrir Mesmo Assim**, apenas para um pacote de origem confiável. Não desative o Gatekeeper.
-
-DMG não substitui Developer ID nem notarização; os avisos de segurança continuam possíveis. Para atualizar, encerre e substitua o app. Para remover, encerre e apague o app; a biblioteca em `Application Support/Waypaper` é mantida até você decidir apagá-la.
-Verificado localmente: build debug e release, assinatura do ZIP extraído, montagem somente leitura do DMG, atalho para Aplicativos e smoke completo executado diretamente do app no DMG. O teste também ocultou temporariamente o bundle de recursos do ambiente de desenvolvimento, confirmando que o app distribuído carrega seus próprios recursos.
-
-
-## Verificação executável
-
-Com uma sessão gráfica ativa e um vídeo curto:
-
-```sh
-swift run Waypaper --smoke-test "himmel-x-frieren-beyond-the-journeys-end-moewalls-com.mp4"
+```text
+dist/
+├── Waypaper.dmg    # app + atalho para Aplicativos
+└── Waypaper.zip    # aplicativo compactado
 ```
 
-O check usa uma biblioteca temporária e não altera sua biblioteca real. Exercita importação/cópia, miniatura, reabertura do manifesto, rejeição de arquivo inválido e de caminho inseguro, proteção de manifesto corrompido, cancelamento, reprodução real, pausa, sessões independentes, configuração de monitor desconectado, nitidez pré-processada uma única vez (com cache reaproveitado e original intacto), loop, reconexão simulada e remoção sem apagar o original. Também abre a interface SwiftUI, captura sua janela, aciona a prévia pelo atalho de teclado e verifica a pausa da prévia ao ocultá-la. Imprime `PASS` ou encerra com código 1. A espera de loop tem limite de 90 segundos.
+Os vídeos da sua biblioteca não entram no pacote. Para distribuir alterações recentes, gere os pacotes novamente; um build de desenvolvimento não atualiza um DMG já existente.
 
-**Limite da verificação local:** há apenas uma tela física neste ambiente. Duas sessões reais são exercitadas nessa tela e desconexão/reconexão é simulada via a mesma reconciliação usada pelas notificações do sistema. Dois monitores físicos, hot-plug real, espelhamento, Spaces/Mission Control e bloqueio/suspensão reais precisam de validação nesse hardware. A captura de NSView não comprova a composição final dos planos de vídeo do WindowServer.
+### Verificar o fluxo completo
 
-A pausa por oclusão só cobre o monitor estar totalmente coberto (ex.: outro app em tela cheia); não há política automática de bateria, catálogo remoto ou super-resolução. Cada monitor visível decodifica seu vídeo; vários vídeos 4K/60 simultâneos aumentam o consumo mesmo sem nitidez (nitidez não adiciona custo de reprodução — veja "Qualidade" — mas o processamento inicial de cada nível é pontualmente mais pesado). Monitores sem UUID ou serial usam identificação transitória e podem exigir nova associação após reconectar/reiniciar.
+Em uma sessão gráfica ativa, use um vídeo curto — o check espera completar um loop, com limite de 90 segundos:
+
+```sh
+swift run Waypaper --smoke-test "/caminho/para/seu-video.mp4"
+```
+
+O smoke check usa uma **biblioteca temporária**, sem alterar a biblioteca real. Ele abre janelas durante a execução, imprime `PASS` para as verificações e encerra com código 1 em caso de falha.
+
+Cobre importação, miniaturas, persistência, entradas inválidas, manifesto corrompido, cancelamento, reprodução com frames reais, pausa, sessões independentes, variante de nitidez com cache e original intacto, loop, reconexão simulada, prévia pela interface e remoção segura. Também salva uma captura da biblioteca no diretório temporário e informa o caminho no terminal.
+
+**Limites da validação local:** os checks foram exercitados com uma única tela física. Duas sessões nessa tela e reconexão simulada não substituem testes com dois monitores físicos, hot-plug, espelhamento, Spaces/Mission Control ou bloqueio/suspensão reais. O smoke check não mede fidelidade, taxa de quadros da exportação ou consumo de recursos; a captura da interface não comprova a composição final do desktop pelo WindowServer.
+
+## Dúvidas rápidas
+
+**Fechei a janela. Como abro de novo?**  
+Clique no ícone de onda/W na barra de menus e abra a biblioteca. Fechar a janela não encerra o aplicativo.
+
+**O vídeo está cortado ou tem barras.**  
+Use **Ajustar** para ver o quadro inteiro ou **Preencher** para ocupar toda a tela. A diferença vem da proporção entre o vídeo e o monitor.
+
+**Por que aparece “Preparando nitidez…”?**  
+O app está gerando a cópia com o filtro aplicado. Aguarde a exportação; esse trabalho não se repete ao selecionar uma variante já preparada.
+
+**A prévia mostra o resultado da nitidez?**  
+Não. A prévia usa o vídeo importado. Confira o efeito no wallpaper aplicado ao monitor.
+
+**Por que está pausado?**  
+Verifique **Retomar** em **Neste monitor**. Reduzir movimento pode iniciar a primeira aplicação pausada; suspensão, sessão inativa e oclusão também interrompem a reprodução automaticamente.
+
+**Posso apagar o vídeo original depois de importar?**  
+O Waypaper já tem uma cópia própria. Mantenha seu original se quiser um backup; remover da biblioteca não apaga o arquivo de origem.
+
+**Meu monitor voltou sem o wallpaper.**  
+Selecione a tela e aplique o vídeo novamente. Monitores sem UUID ou número de série utilizam uma identificação transitória e podem exigir uma nova associação após reconectar ou reiniciar.
+
+**Quais vídeos funcionam?**  
+A reprodução depende dos formatos e codecs aceitos pelo AVFoundation no seu macOS. Um MP4 com vídeo H.264 é um ponto de partida; a importação valida se o arquivo tem vídeo reproduzível e duração finita. O áudio não é reproduzido.
 
 ## Identidade visual
 
-O ícone foi gerado com a ferramenta integrada **image_gen**, acionada pela CLI do Codex com a skill `imagegen`, sem fallback de API ou chave externa. A arte hero existente foi preservada.
+O W em forma de onda usa a paleta ciano, verde-azulado e violeta da [arte aurora](assets/images/waypaper-hero-aurora.png). O [master do ícone](assets/images/waypaper-app-icon-master.png) foi gerado com `image_gen` pela CLI do Codex; os derivados PNG/ICNS recebem transparência fora do quadrado arredondado. O ícone da barra de menus é desenhado nativamente e acompanha o tema do sistema.
 
-- Master gerado: `assets/images/waypaper-app-icon-master.png`.
-- Ícones do aplicativo: `Sources/Waypaper/Resources/AppIcon.png` e `AppIcon.icns`.
-- Ícone monocromático da barra: desenho nativo em `AppIdentity`, adaptado ao tema do sistema.
-
-O master original permanece intacto; os derivados recebem transparência fora do quadrado arredondado. Para regenerar os derivados:
+<details>
+<summary>Regenerar os ícones e consultar o prompt visual</summary>
 
 ```sh
 python3 scripts/make_app_icon.py --mask-from assets/images/waypaper-app-icon-master.png
 ```
 
-Prompt visual enviado ao Codex/imagegen (a imagem hero foi fornecida como referência):
+Prompt enviado ao Codex/imagegen, com a arte aurora como referência:
 
 ```text
 Use the built-in imagegen skill and built-in image_gen tool only (NOT CLI fallback, NOT OPENAI_API_KEY). Generate exactly one macOS app icon master image.
@@ -133,4 +271,8 @@ Constraints: must read as W+wave at small sizes; no photographs; no UI chrome; n
 Avoid: busy wallpaper imagery, tiny illegible detail, text, dock mockups
 ```
 
-Arquivos de vídeo e artefatos de compilação/distribuição são ignorados pelo Git. O aplicativo não concede direitos de uso ou redistribuição das mídias importadas.
+</details>
+
+---
+
+Vídeos e artefatos de compilação/distribuição são ignorados pelo Git. As capturas mostram mídia usada para demonstração; o Waypaper não concede direitos de uso ou redistribuição das mídias importadas.
