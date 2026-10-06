@@ -42,7 +42,7 @@ final class WallpaperSession {
                 else { return }
                 self.playbackBlockedByFailure = true
                 self.syncPlayback()
-                self.onFailure?(item.error?.localizedDescription ?? "Não foi possível continuar a reprodução.")
+                self.onFailure?(item.error?.localizedDescription ?? L10n.string("Could not continue playback."))
             }
         }
     }
@@ -255,7 +255,7 @@ final class WallpaperSession {
         let duration = try await asset.load(.duration).seconds
         guard playable, !tracks.isEmpty, duration.isFinite, duration > 0 else {
             throw WaypaperPlaybackError.invalidVideo(
-                "Selecione um vídeo reproduzível, com duração finita e maior que zero."
+                L10n.string("Select a playable video with a finite duration greater than zero.")
             )
         }
         try Task.checkCancellation()

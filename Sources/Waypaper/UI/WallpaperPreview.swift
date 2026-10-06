@@ -16,12 +16,12 @@ struct WallpaperPreview: View {
             } else {
                 if let poster { Image(nsImage: poster).resizable().scaledToFit() }
                 Button { started = true } label: {
-                    Label("Reproduzir prévia", systemImage: "play.fill")
+                    Label { Text(l10n: "Play preview") } icon: { Image(systemName: "play.fill") }
                 }
                 .buttonStyle(.borderedProminent)
-                .accessibilityLabel("Reproduzir prévia")
+                .accessibilityLabel(L10n.string("Play preview"))
                 .keyboardShortcut(.space, modifiers: [])
-                .help("Reproduzir prévia (Espaço)")
+                .help(L10n.string("Play preview (Space)"))
             }
         }
         .task(id: thumbnailURL) {

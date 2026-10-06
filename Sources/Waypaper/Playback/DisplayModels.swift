@@ -49,7 +49,7 @@ enum DisplayPersistenceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .corruptedStore(let detail):
-            return "Configurações de monitor corrompidas; o arquivo não foi alterado. (\(detail))"
+            return L10n.format("Display settings are corrupted; the file was not changed. (%@)", detail)
         }
     }
 }
@@ -86,13 +86,13 @@ enum WaypaperPlaybackError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .wallpaperMissing:
-            return "O wallpaper não está mais na biblioteca."
+            return L10n.string("The wallpaper is no longer in the library.")
         case .unreadableVideo(let path):
-            return "O arquivo não está acessível: \(path)"
+            return L10n.format("The file is not accessible: %@", path)
         case .invalidVideo(let message):
             return message
         case .persistenceBlocked:
-            return "As configurações de monitor não podem ser salvas até o arquivo corrompido ser corrigido."
+            return L10n.string("Display settings cannot be saved until the corrupted file is fixed.")
         }
     }
 }

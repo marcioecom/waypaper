@@ -41,7 +41,18 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          name: Waypaper ${{ steps.version.outputs.marketing }} (Apple Silicon, macOS 13+)
+          generate_release_notes: false
+          body: |
+            Waypaper turns your videos into animated wallpapers on macOS. Local library, per-display playback, no account and no cloud.
+
+            Requires **macOS 13 or later** on **Apple Silicon (M1 and later)**. Intel Macs are not supported.
+
+            **Install:** download `Waypaper.dmg`, open it, and drag **Waypaper** to Applications.
+
+            **First launch:** this build is ad hoc signed and not notarized. If macOS blocks the app, open **System Settings → Privacy & Security** and click **Open Anyway**. Do not disable Gatekeeper.
+
+            The interface follows the Mac language: **English** or **Brazilian Portuguese**. **Open at login** is in the library sidebar.
           files: |
             dist/Waypaper.dmg
             dist/Waypaper.zip

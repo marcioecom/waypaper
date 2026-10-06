@@ -26,17 +26,17 @@ enum WallpaperLibraryError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .corruptedManifest(let detail):
-            return "Biblioteca corrompida; o arquivo não foi alterado. (\(detail))"
+            return L10n.format("Corrupted library; the file was not changed. (%@)", detail)
         case .persistenceBlocked:
-            return "A biblioteca não pode ser alterada até o manifesto corrompido ser corrigido."
+            return L10n.string("The library cannot be changed until the corrupted manifest is fixed.")
         case .importInProgress:
-            return "Aguarde o fim da importação em andamento."
+            return L10n.string("Wait for the current import to finish.")
         case .invalidSource(let message):
             return message
         case .invalidVideo(let message):
             return message
         case .unreadableSource(let path):
-            return "O arquivo não está acessível: \(path)"
+            return L10n.format("The file is not accessible: %@", path)
         case .deletionFailed(let message):
             return message
         }
@@ -86,16 +86,16 @@ enum WallpaperPersistence {
 
     static func validateWallpaper(_ wallpaper: Wallpaper, seenIDs: inout Set<UUID>) throws {
         guard seenIDs.insert(wallpaper.id).inserted else {
-            throw WallpaperLibraryError.corruptedManifest("ID duplicado: \(wallpaper.id.uuidString)")
+            throw WallpaperLibraryError.corruptedManifest(L10n.format("Duplicate id: %@", wallpaper.id.uuidString))
         }
         guard wallpaper.width > 0, wallpaper.height > 0 else {
-            throw WallpaperLibraryError.corruptedManifest("Dimensões inválidas para \(wallpaper.id.uuidString)")
+            throw WallpaperLibraryError.corruptedManifest(L10n.format("Invalid dimensions for %@", wallpaper.id.uuidString))
         }
         guard wallpaper.duration.isFinite, wallpaper.duration > 0 else {
-            throw WallpaperLibraryError.corruptedManifest("Duração inválida para \(wallpaper.id.uuidString)")
+            throw WallpaperLibraryError.corruptedManifest(L10n.format("Invalid duration for %@", wallpaper.id.uuidString))
         }
         guard isOwnedMediaFileName(wallpaper.fileName, wallpaperID: wallpaper.id) else {
-            throw WallpaperLibraryError.corruptedManifest("Nome de arquivo inválido para \(wallpaper.id.uuidString)")
+            throw WallpaperLibraryError.corruptedManifest(L10n.format("Invalid file name for %@", wallpaper.id.uuidString))
         }
     }
 
@@ -123,7 +123,7 @@ enum WallpaperPersistence {
             .appendingPathComponent(wallpaper.fileName, isDirectory: false)
             .standardizedFileURL
         guard isContained(candidate, in: mediaDirectory) else {
-            throw WallpaperLibraryError.corruptedManifest("Caminho de mídia fora da biblioteca")
+            throw WallpaperLibraryError.corruptedManifest(L10n.string("Media path is outside the library"))
         }
         return candidate
     }
@@ -139,7 +139,7 @@ enum WallpaperPersistence {
             .appendingPathComponent(fileName, isDirectory: false)
             .standardizedFileURL
         guard isContained(candidate, in: thumbnailsDirectory) else {
-            throw WallpaperLibraryError.corruptedManifest("Caminho de miniatura fora da biblioteca")
+            throw WallpaperLibraryError.corruptedManifest(L10n.string("Thumbnail path is outside the library"))
         }
         return candidate
     }
@@ -157,7 +157,7 @@ enum WallpaperPersistence {
             .appendingPathComponent(wallpaper.id.uuidString, isDirectory: true)
             .standardizedFileURL
         guard isContained(candidate, in: variantsRoot) else {
-            throw WallpaperLibraryError.corruptedManifest("Caminho de variante fora da biblioteca")
+            throw WallpaperLibraryError.corruptedManifest(L10n.string("Variant path is outside the library"))
         }
         return candidate
     }

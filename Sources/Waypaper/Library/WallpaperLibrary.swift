@@ -153,7 +153,7 @@ final class WallpaperLibrary: ObservableObject {
         }
         if !deletionErrors.isEmpty {
             throw WallpaperLibraryError.deletionFailed(
-                "O wallpaper foi removido da biblioteca, mas alguns arquivos não puderam ser apagados: \(deletionErrors.joined(separator: "; "))"
+                L10n.format("The wallpaper was removed from the library, but some files could not be deleted: %@", deletionErrors.joined(separator: "; "))
             )
         }
     }
@@ -191,7 +191,7 @@ private enum WallpaperImportWorker {
         let fm = FileManager.default
         var isDirectory: ObjCBool = false
         guard fm.fileExists(atPath: source.path, isDirectory: &isDirectory), !isDirectory.boolValue else {
-            throw WallpaperLibraryError.invalidSource("Selecione um arquivo de vídeo, não uma pasta.")
+            throw WallpaperLibraryError.invalidSource(L10n.string("Select a video file, not a folder."))
         }
         guard fm.isReadableFile(atPath: source.path) else {
             throw WallpaperLibraryError.unreadableSource(source.path)
@@ -254,7 +254,7 @@ private enum WallpaperImportWorker {
         let duration = try await asset.load(.duration).seconds
         guard readable, playable, !tracks.isEmpty, duration.isFinite, duration > 0 else {
             throw WallpaperLibraryError.invalidVideo(
-                "Selecione um vídeo reproduzível, com faixa de vídeo, duração finita e maior que zero."
+                L10n.string("Select a playable video with a video track, a finite duration, and a duration greater than zero.")
             )
         }
         let track = tracks[0]
@@ -274,7 +274,7 @@ private enum WallpaperImportWorker {
         let image = try generator.copyCGImage(at: .zero, actualTime: nil)
         let rep = NSBitmapImageRep(cgImage: image)
         guard let data = rep.representation(using: .jpeg, properties: [.compressionFactor: 0.85]) else {
-            throw WallpaperLibraryError.invalidVideo("Não foi possível gerar a miniatura do vídeo.")
+            throw WallpaperLibraryError.invalidVideo(L10n.string("Could not generate the video thumbnail."))
         }
         try data.write(to: destination, options: .atomic)
     }

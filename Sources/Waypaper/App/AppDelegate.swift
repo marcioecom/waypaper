@@ -87,8 +87,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard !library.isImporting, importTask == nil else { return }
         showLibrary()
         let panel = NSOpenPanel()
-        panel.title = "Importar vídeos para a biblioteca"
-        panel.message = "Uma cópia será guardada no Waypaper. O arquivo original não será alterado."
+        panel.title = L10n.string("Import videos into the library")
+        panel.message = L10n.string("A copy will be stored in Waypaper. The original file will not be changed.")
         panel.allowedContentTypes = [.movie]
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
@@ -147,19 +147,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let main = NSMenu()
         let app = NSMenuItem()
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "Encerrar Waypaper", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: L10n.string("Quit Waypaper"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         app.submenu = appMenu
         main.addItem(app)
         let file = NSMenuItem()
-        let fileMenu = NSMenu(title: "Arquivo")
-        let item = NSMenuItem(title: "Importar vídeos…", action: #selector(chooseVideos), keyEquivalent: "o")
+        let fileMenu = NSMenu(title: L10n.string("File"))
+        let item = NSMenuItem(title: L10n.string("Import videos…"), action: #selector(chooseVideos), keyEquivalent: "o")
         item.target = self
         fileMenu.addItem(item)
         file.submenu = fileMenu
         main.addItem(file)
         let edit = NSMenuItem()
-        let editMenu = NSMenu(title: "Editar")
-        for (title, action, key) in [("Copiar", "copy:", "c"), ("Colar", "paste:", "v"), ("Selecionar tudo", "selectAll:", "a")] {
+        let editMenu = NSMenu(title: L10n.string("Edit"))
+        for (title, action, key) in [(L10n.string("Copy"), "copy:", "c"), (L10n.string("Paste"), "paste:", "v"), (L10n.string("Select All"), "selectAll:", "a")] {
             editMenu.addItem(withTitle: title, action: Selector(action), keyEquivalent: key)
         }
         edit.submenu = editMenu

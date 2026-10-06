@@ -29,7 +29,8 @@ final class StatusBarController: NSObject, NSMenuDelegate {
     private let showLibrary: () -> Void
     private let importVideos: () -> Void
     private let togglePlayback: () -> Void
-    let pauseItem = NSMenuItem(title: "Pausar todos", action: #selector(toggle), keyEquivalent: "p")
+    let pauseItem = NSMenuItem(title: L10n.string("Pause all"), action: #selector(toggle), keyEquivalent: "p")
+    private let loginItem = NSMenuItem(title: L10n.string("Open at login"), action: #selector(toggleLogin), keyEquivalent: "")
 
     init(displays: DisplayCoordinator, showLibrary: @escaping () -> Void, importVideos: @escaping () -> Void, togglePlayback: @escaping () -> Void) {
         self.displays = displays
@@ -39,15 +40,16 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         super.init()
         item.button?.image = AppIdentity.menuIcon
         item.button?.toolTip = "Waypaper"
-        item.button?.setAccessibilityLabel("Waypaper — wallpapers por monitor")
+        item.button?.setAccessibilityLabel(L10n.string("Waypaper — wallpapers per display"))
         let menu = NSMenu()
         menu.autoenablesItems = false
         menu.delegate = self
         for entry in [
-            NSMenuItem(title: "Abrir biblioteca…", action: #selector(open), keyEquivalent: "b"),
-            NSMenuItem(title: "Importar vídeos…", action: #selector(importFiles), keyEquivalent: "o"),
+            NSMenuItem(title: L10n.string("Open library…"), action: #selector(open), keyEquivalent: "b"),
+            NSMenuItem(title: L10n.string("Import videos…"), action: #selector(importFiles), keyEquivalent: "o"),
             .separator(), pauseItem, .separator(),
-            NSMenuItem(title: "Encerrar Waypaper", action: #selector(quit), keyEquivalent: "q")
+            loginItem, .separator(),
+            NSMenuItem(title: L10n.string("Quit Waypaper"), action: #selector(quit), keyEquivalent: "q")
         ] {
             entry.target = self
             menu.addItem(entry)
@@ -58,12 +60,19 @@ final class StatusBarController: NSObject, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         let active = displays.displays.compactMap { displays.assignments[$0.id] }.filter { $0.wallpaperID != nil }
         pauseItem.isEnabled = !active.isEmpty
-        pauseItem.title = !active.isEmpty && active.allSatisfy(\.paused) ? "Retomar todos" : "Pausar todos"
+        pauseItem.title = !active.isEmpty && active.allSatisfy(\.paused) ? L10n.string("Resume all") : L10n.string("Pause all")
+        loginItem.state = LoginItem.isEnabled ? .on : .off
+        loginItem.title = L10n.string("Open at login")
     }
 
     @objc private func open() { showLibrary() }
     @objc private func importFiles() { importVideos() }
     @objc private func toggle() { togglePlayback() }
+    @objc private func toggleLogin() {
+        do { try LoginItem.setEnabled(!LoginItem.isEnabled) }
+        catch { NSSound.beep() }
+        if let menu = item.menu { menuNeedsUpdate(menu) }
+    }
     @objc private func quit() { NSApp.terminate(nil) }
 
     func stop() { NSStatusBar.system.removeStatusItem(item) }

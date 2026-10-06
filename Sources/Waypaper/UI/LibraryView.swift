@@ -15,6 +15,7 @@ struct LibraryView: View {
     @State private var errorMessage: String?
     @State private var working = false
     @State private var dropTargeted = false
+    @State private var openAtLogin = false
 
     private var selected: Wallpaper? { library.wallpapers.first { $0.id == selectedID } }
     private var settings: DisplaySettings { displays.assignments[displayID] ?? DisplaySettings() }
@@ -35,16 +36,19 @@ struct LibraryView: View {
         }
         .frame(minWidth: 860, minHeight: 560)
         .background(Color(nsColor: .windowBackgroundColor))
-        .onAppear { synchronizeSelection() }
+        .onAppear {
+            synchronizeSelection()
+            openAtLogin = LoginItem.isEnabled
+        }
         .onChange(of: library.wallpapers.map(\.id)) { _ in synchronizeSelection() }
         .onChange(of: displays.displays.map(\.id)) { _ in synchronizeSelection() }
         .onChange(of: library.errorMessage) { if let message = $0 { errorMessage = message; library.errorMessage = nil } }
         .onChange(of: displays.errorMessage) { if let message = $0 { errorMessage = message; displays.errorMessage = nil } }
-        .alert("Não foi possível concluir", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
-            Button("OK", role: .cancel) { errorMessage = nil }
+        .alert(L10n.string("Could not finish"), isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
+            Button(L10n.string("OK"), role: .cancel) { errorMessage = nil }
         } message: { Text(errorMessage ?? "") }
-        .confirmationDialog("Remover da biblioteca?", isPresented: Binding(get: { pendingRemoval != nil }, set: { if !$0 { pendingRemoval = nil } }), titleVisibility: .visible) {
-            Button("Remover wallpaper", role: .destructive) {
+        .confirmationDialog(L10n.string("Remove from library?"), isPresented: Binding(get: { pendingRemoval != nil }, set: { if !$0 { pendingRemoval = nil } }), titleVisibility: .visible) {
+            Button(L10n.string("Remove wallpaper"), role: .destructive) {
                 guard let wallpaper = pendingRemoval else { return }
                 perform {
                     for (id, assignment) in displays.assignments where assignment.wallpaperID == wallpaper.id {
@@ -54,8 +58,8 @@ struct LibraryView: View {
                 }
                 pendingRemoval = nil
             }
-            Button("Cancelar", role: .cancel) { pendingRemoval = nil }
-        } message: { Text("A cópia da biblioteca será removida e deixará de ser usada nos monitores. O arquivo original não será apagado.") }
+            Button(L10n.string("Cancel"), role: .cancel) { pendingRemoval = nil }
+        } message: { Text(l10n: "The library copy will be removed and will no longer be used on your displays. The original file will not be deleted.") }
     }
 
     private var sidebar: some View {
@@ -66,7 +70,7 @@ struct LibraryView: View {
             }
             .padding(.top, 12)
             VStack(alignment: .leading, spacing: 10) {
-                Text("Monitores").font(.headline).foregroundStyle(.secondary)
+                Text(l10n: "Displays").font(.headline).foregroundStyle(.secondary)
                 ForEach(displays.displays) { display in
                     Button { displayID = display.id } label: {
                         HStack(spacing: 9) {
@@ -75,7 +79,7 @@ struct LibraryView: View {
                             Spacer(minLength: 0)
                             if displays.assignments[display.id]?.wallpaperID != nil {
                                 Circle().fill(Color.accentColor).frame(width: 6, height: 6)
-                                    .accessibilityLabel("Wallpaper configurado")
+                                    .accessibilityLabel(L10n.string("Wallpaper assigned"))
                             }
                         }
                         .padding(10)
@@ -87,12 +91,20 @@ struct LibraryView: View {
                     .accessibilityAddTraits(displayID == display.id ? .isSelected : [])
                 }
                 if displays.displays.isEmpty {
-                    Text("Nenhum monitor disponível.").font(.callout).foregroundStyle(.secondary)
+                    Text(l10n: "No displays available.").font(.callout).foregroundStyle(.secondary)
                 }
             }
             Spacer()
-            Text("Seu desktop, em movimento.").font(.callout.weight(.medium))
-            Text("Vídeos locais. Sem conta, sem nuvem.")
+            Toggle(isOn: Binding(get: { openAtLogin }, set: { newValue in
+                do { try LoginItem.setEnabled(newValue) }
+                catch { errorMessage = error.localizedDescription }
+                openAtLogin = LoginItem.isEnabled
+            })) {
+                Text(l10n: "Open at login")
+            }
+            .help(L10n.string("Launch Waypaper when you log in to this Mac."))
+            Text(l10n: "Your desktop, in motion.").font(.callout.weight(.medium))
+            Text(l10n: "Local videos. No account, no cloud.")
                 .font(.caption).foregroundStyle(.secondary)
         }
         .padding(18)
@@ -103,13 +115,15 @@ struct LibraryView: View {
     private var header: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Biblioteca").font(.title2.weight(.semibold))
-                Text("Escolha um vídeo e aplique ao monitor selecionado.")
+                Text(l10n: "Library").font(.title2.weight(.semibold))
+                Text(l10n: "Choose a video and apply it to the selected display.")
                     .font(.callout).foregroundStyle(.secondary)
             }
             Spacer()
-            if library.isImporting { ProgressView().controlSize(.small).accessibilityLabel("Importando vídeo") }
-            Button(action: chooseVideos) { Label("Importar vídeos", systemImage: "plus") }
+            if library.isImporting { ProgressView().controlSize(.small).accessibilityLabel(L10n.string("Importing video")) }
+            Button(action: chooseVideos) {
+                Label { Text(l10n: "Import videos") } icon: { Image(systemName: "plus") }
+            }
                 .disabled(library.isImporting)
                 .keyboardShortcut("o", modifiers: .command)
         }
@@ -121,10 +135,10 @@ struct LibraryView: View {
             if library.wallpapers.isEmpty {
                 VStack(spacing: 16) {
                     Image(systemName: "rectangle.stack.badge.play").font(.system(size: 40)).foregroundStyle(.secondary)
-                    Text("Um novo fundo começa aqui").font(.title3.weight(.semibold))
-                    Text("Arraste vídeos para esta janela ou importe do Mac. Guardamos uma cópia na biblioteca; seus originais não são alterados.")
+                    Text(l10n: "A new background starts here").font(.title3.weight(.semibold))
+                    Text(l10n: "Drag videos into this window or import them from your Mac. We keep a library copy; your originals are not changed.")
                         .foregroundStyle(.secondary).multilineTextAlignment(.center).frame(maxWidth: 330)
-                    Button("Escolher vídeos", action: chooseVideos).buttonStyle(.borderedProminent).disabled(library.isImporting)
+                    Button(L10n.string("Choose videos"), action: chooseVideos).buttonStyle(.borderedProminent).disabled(library.isImporting)
                 }
                 .padding(32).frame(maxWidth: .infinity, minHeight: 340)
             } else {
@@ -141,15 +155,15 @@ struct LibraryView: View {
                                 HStack {
                                     Text("\(wallpaper.width) × \(wallpaper.height)")
                                     Spacer()
-                                    if current?.id == wallpaper.id { Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.accentColor).accessibilityLabel("Aplicado neste monitor") }
+                                    if current?.id == wallpaper.id { Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.accentColor).accessibilityLabel(L10n.string("Applied on this display")) }
                                 }.font(.caption).foregroundStyle(.secondary)
                             }
                             .padding(3).contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("\(wallpaper.title), \(wallpaper.width) por \(wallpaper.height)")
+                        .accessibilityLabel(L10n.format("%1$@, %2$lld by %3$lld", wallpaper.title, Int64(wallpaper.width), Int64(wallpaper.height)))
                         .accessibilityAddTraits(selectedID == wallpaper.id ? .isSelected : [])
-                        .contextMenu { Button("Remover da biblioteca…", role: .destructive) { pendingRemoval = wallpaper } }
+                        .contextMenu { Button(L10n.string("Remove from library…"), role: .destructive) { pendingRemoval = wallpaper } }
                     }
                 }.padding(20)
             }
@@ -179,7 +193,7 @@ struct LibraryView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 if let wallpaper = selected {
-                    Text("Prévia").font(.headline)
+                    Text(l10n: "Preview").font(.headline)
                     WallpaperPreview(url: library.url(for: wallpaper), thumbnailURL: library.thumbnailURL(for: wallpaper))
                         .aspectRatio(16 / 9, contentMode: .fit)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -190,49 +204,49 @@ struct LibraryView: View {
                     Button {
                         perform { try await displays.apply(wallpaper, to: displayID) }
                     } label: {
-                        Text(current?.id == wallpaper.id ? "Reaplicar ao monitor" : "Aplicar ao monitor")
+                        Text(l10n: current?.id == wallpaper.id ? "Reapply to display" : "Apply to display")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(displayID.isEmpty || working)
-                    Button("Remover da biblioteca…", role: .destructive) { pendingRemoval = wallpaper }
+                    Button(L10n.string("Remove from library…"), role: .destructive) { pendingRemoval = wallpaper }
                         .disabled(working)
                 } else {
-                    Text("Selecione um wallpaper").font(.headline)
-                    Text("A prévia e os detalhes aparecem aqui.").foregroundStyle(.secondary)
+                    Text(l10n: "Select a wallpaper").font(.headline)
+                    Text(l10n: "The preview and details appear here.").foregroundStyle(.secondary)
                 }
                 Divider()
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Neste monitor").font(.headline)
-                    Text(current?.title ?? "Fundo original do macOS")
+                    Text(l10n: "On this display").font(.headline)
+                    Text(current?.title ?? L10n.string("macOS wallpaper"))
                         .font(.callout).foregroundStyle(.secondary).lineLimit(2)
-                    Picker("Enquadramento", selection: Binding(get: { settings.fit }, set: { value in
+                    Picker(L10n.string("Framing"), selection: Binding(get: { settings.fit }, set: { value in
                         var updated = settings; updated.fit = value; save(updated)
                     })) {
-                        Text("Preencher").tag(WallpaperFit.fill)
-                        Text("Ajustar").tag(WallpaperFit.fit)
+                        Text(l10n: "Fill").tag(WallpaperFit.fill)
+                        Text(l10n: "Fit").tag(WallpaperFit.fit)
                     }
                     .pickerStyle(.segmented)
-                    .help("Preencher recorta as bordas; Ajustar mantém todo o vídeo com barras quando necessário.")
+                    .help(L10n.string("Fill crops the edges; Fit keeps the whole video and may add bars."))
                     .disabled(current == nil || working)
                     SharpnessControl(value: settings.sharpness, enabled: current != nil && !working && !isPreparing) { value in
                         var updated = settings; updated.sharpness = value; save(updated)
                     }
-                    Text("Nitidez realça contornos; não é super-resolução por IA. A primeira vez que você liga um nível de nitidez, o vídeo é processado uma única vez em segundo plano; depois disso a reprodução é tão leve quanto o vídeo original.")
+                    Text(l10n: "Sharpness emphasizes edges; it is not AI super-resolution. The first time you choose a sharpness level, the video is processed once in the background; after that, playback is as light as the original video.")
                         .font(.caption).foregroundStyle(.secondary)
                     if isPreparing {
                         HStack(spacing: 6) {
                             ProgressView().controlSize(.small)
-                            Text("Preparando nitidez…").font(.caption).foregroundStyle(.secondary)
+                            Text(l10n: "Preparing sharpness…").font(.caption).foregroundStyle(.secondary)
                         }
                     }
                     HStack {
-                        Button(settings.paused ? "Retomar" : "Pausar") {
+                        Button(L10n.string(settings.paused ? "Resume" : "Pause")) {
                             var updated = settings; updated.paused.toggle(); save(updated)
                         }
-                        Button("Restaurar fundo") { perform { try displays.clear(displayID: displayID) } }
+                        Button(L10n.string("Restore background")) { perform { try displays.clear(displayID: displayID) } }
                     }.disabled(current == nil || working)
-                    if working { ProgressView().controlSize(.small).accessibilityLabel("Aplicando configuração") }
+                    if working { ProgressView().controlSize(.small).accessibilityLabel(L10n.string("Applying setting")) }
                 }
             }.padding(20)
         }
@@ -266,9 +280,9 @@ private struct SharpnessControl: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            HStack { Text("Nitidez"); Spacer(); Text(draft == 0 ? "Original" : "\(Int(draft * 100))%").foregroundStyle(.secondary) }
+            HStack { Text(l10n: "Sharpness"); Spacer(); Text(draft == 0 ? L10n.string("Original") : "\(Int(draft * 100))%").foregroundStyle(.secondary) }
             Slider(value: $draft, in: 0...1, step: 0.05, onEditingChanged: { editing in if !editing { commit(draft) } })
-                .accessibilityLabel("Intensidade da nitidez")
+                .accessibilityLabel(L10n.string("Sharpness amount"))
                 .disabled(!enabled)
         }
         .onAppear { draft = value }

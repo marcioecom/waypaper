@@ -36,12 +36,12 @@ private final class ExportSessionBox: @unchecked Sendable {
         case .cancelled:
             continuation.resume(throwing: CancellationError())
         case .failed:
-            let message = session.error?.localizedDescription ?? "Exportação falhou."
+            let message = session.error?.localizedDescription ?? L10n.string("Export failed.")
             continuation.resume(throwing: WallpaperVariantRenderer.RenderError.exportFailed(message))
         default:
             continuation.resume(
                 throwing: WallpaperVariantRenderer.RenderError.exportFailed(
-                    "Exportação terminou em estado inesperado."
+                    L10n.string("Export finished in an unexpected state.")
                 )
             )
         }
@@ -56,9 +56,9 @@ enum WallpaperVariantRenderer {
         var errorDescription: String? {
             switch self {
             case .noVideoTrack:
-                return "O vídeo original não possui uma trilha de vídeo válida."
+                return L10n.string("The original video does not have a valid video track.")
             case .exportFailed(let detail):
-                return "Não foi possível preparar a nitidez do vídeo: \(detail)"
+                return L10n.format("Could not prepare sharpness for the video: %@", detail)
             }
         }
     }
@@ -89,7 +89,7 @@ enum WallpaperVariantRenderer {
             asset: asset,
             presetName: AVAssetExportPresetHighestQuality
         ) else {
-            throw RenderError.exportFailed("Não foi possível criar a sessão de exportação.")
+            throw RenderError.exportFailed(L10n.string("Could not create the export session."))
         }
         exportSession.videoComposition = composition
         exportSession.outputFileType = .mp4

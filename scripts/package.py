@@ -64,7 +64,8 @@ def assemble_app(root: Path, binary_directory: Path, staging_app: Path) -> None:
 
     short_version, build_version = bundle_versions()
     info: dict[str, object] = {
-        "CFBundleDevelopmentRegion": "pt_BR",
+        "CFBundleDevelopmentRegion": "en",
+        "CFBundleLocalizations": ["en", "pt-BR"],
         "CFBundleDisplayName": "Waypaper",
         "CFBundleName": "Waypaper",
         "CFBundleExecutable": "Waypaper",

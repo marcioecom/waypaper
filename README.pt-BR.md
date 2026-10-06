@@ -10,7 +10,7 @@
 Transforme seus vídeos em wallpapers animados no macOS.<br>
 Biblioteca local, ajustes por monitor e uma interface nativa. Sem conta, sem nuvem.</p>
 
-<p align="center">macOS 13+ · Swift + SwiftUI · AVFoundation · Sem dependências externas</p>
+<p align="center">macOS 13+ · Apple Silicon · Swift + SwiftUI · AVFoundation · Sem dependências externas</p>
 
 <p align="center">
   <a href="#comece-aqui">Comece aqui</a> ·
@@ -19,6 +19,19 @@ Biblioteca local, ajustes por monitor e uma interface nativa. Sem conta, sem nuv
   <a href="#desenvolvimento">Desenvolvimento</a> ·
   <a href="#dúvidas-rápidas">Dúvidas</a>
 </p>
+
+<p align="center">
+  <a href="https://github.com/marcioecom/waypaper/releases/latest/download/Waypaper.dmg"><strong>⬇ Baixar Waypaper.dmg</strong></a><br>
+  macOS 13 ou superior · Apple Silicon (M1 e posteriores) · Macs Intel não são suportados
+</p>
+
+## Primeira abertura
+
+O download é assinado **ad hoc**. Não é notarizado. Não desative o Gatekeeper.
+
+1. Abra o DMG e arraste **Waypaper** para **Aplicativos**.
+2. Abra o **Waypaper**.
+3. Se o macOS disser que não foi possível abrir, vá a **Ajustes do Sistema → Privacidade e Segurança** e clique em **Abrir Mesmo Assim**. Esse botão só aparece depois da tentativa bloqueada. Em seguida, confirme **Abrir**.
 
 ![Biblioteca do Waypaper com seleção de monitor, wallpaper importado, prévia e ajustes de reprodução](assets/images/waypaper-library.jpg)
 
@@ -29,25 +42,28 @@ Biblioteca local, ajustes por monitor e uma interface nativa. Sem conta, sem nuv
 - **Conferir antes de aplicar.** Miniaturas estáticas e prévia sob demanda — a biblioteca não reproduz todos os vídeos ao mesmo tempo.
 - **Ajustar o visual.** Preencha a tela ou preserve o quadro inteiro; adicione nitidez se quiser.
 - **Fechar a biblioteca e continuar usando.** O app fica na barra de menus e o wallpaper continua em loop, sem áudio.
+- **Abrir ao iniciar a sessão.** Ative **Abrir ao iniciar a sessão** na lateral da biblioteca (também na barra de menus). Fica desligado até você ativar, e usa o item de início de sessão do macOS 13 deste app — não um serviço separado.
 - **Voltar ao fundo do macOS.** Um clique em **Restaurar fundo**, sem apagar sua biblioteca.
 
 ## Comece aqui
 
 ### 1. Instale o aplicativo
 
-Você precisa de **macOS 13 ou superior**. Os pacotes gerados pelo projeto são para **Apple Silicon — M1 e posteriores**.
+Você precisa de **macOS 13 ou superior** em **Apple Silicon (M1 e posteriores)**. Estes pacotes não são universais e não rodam em Macs Intel.
 
-Se você recebeu um `Waypaper.dmg` ou `Waypaper.zip`:
+[⬇ Baixar Waypaper.dmg](https://github.com/marcioecom/waypaper/releases/latest/download/Waypaper.dmg) ou use o `Waypaper.zip` da mesma release.
 
 1. Abra o DMG e arraste **Waypaper.app** para **Aplicativos**. Se for ZIP, descompacte e mova o app para essa pasta.
 2. Abra **Waypaper** em Aplicativos.
-3. Se o macOS bloquear a abertura, vá a **Ajustes do Sistema → Privacidade e Segurança → Abrir Mesmo Assim**, depois de tentar abrir o app e somente se confiar na origem do pacote.
+3. Se o macOS bloquear a primeira abertura, siga [Primeira abertura](#primeira-abertura). Não desative o Gatekeeper.
 
-> Os pacotes usam assinatura **ad hoc**, sem Developer ID ou notarização. Não desative o Gatekeeper. No Mac que vai usar o app, não é necessário instalar Swift, Python ou Xcode.
+> No Mac que só vai usar o app empacotado, não é necessário instalar Swift, Python ou Xcode.
 
 **Só tem o código-fonte?** Veja [como executar](#desenvolvimento) ou [gerar um DMG/ZIP](#gerar-dmg-e-zip). Vídeos não acompanham o aplicativo: use arquivos que você tenha direito de utilizar.
 
 ### 2. Coloque seu primeiro wallpaper
+
+A interface acompanha o idioma do Mac: **português (Brasil)** ou **inglês**. Os nomes abaixo são os rótulos em português. Em inglês, os mesmos controles aparecem como **Import videos**, **Play preview**, **Apply to display** e **Open at login**.
 
 1. Clique em **Importar vídeos** ou arraste um vídeo para a biblioteca.
 2. Selecione o **monitor** na lateral esquerda.
@@ -69,14 +85,15 @@ Os controles em **Neste monitor** afetam o wallpaper aplicado à tela selecionad
 | **Pausar / Retomar** | Controla a reprodução naquele monitor. |
 | **Restaurar fundo** | Retira o vídeo e revela o wallpaper original do macOS. |
 | **Remover da biblioteca…** | Apaga as cópias gerenciadas e desfaz as associações aos monitores. Não apaga seu arquivo de origem. |
+| **Abrir ao iniciar a sessão** | Interruptor na lateral e na barra de menus. Registra este app no macOS para abrir ao iniciar a sessão. Desligado até você ativar. |
 
 ## O app na prática
 
 <p align="center">
-  <img src="assets/images/waypaper-demo.gif" width="720" alt="Biblioteca do Waypaper sobre um wallpaper animado de teste, capturada no smoke check">
+  <img src="assets/images/waypaper-demo.gif" width="720" alt="Gravação da tela com a biblioteca do Waypaper na frente de um wallpaper de teste em movimento">
 </p>
 
-A captura no início mostra a biblioteca real: **monitores à esquerda**, **vídeos no centro** e **prévia e ajustes à direita**. O GIF acima usa a mesma interface capturada pelo smoke check, sobre um clipe sintético que sugere a reprodução no desktop.
+A captura no início mostra a biblioteca real: **monitores à esquerda**, **vídeos no centro** e **prévia e ajustes à direita**. O GIF é uma gravação dessa janela na frente do desktop, com o wallpaper de teste se movendo ao redor.
 
 ### Prévia antes de aplicar
 
@@ -92,7 +109,7 @@ A prévia é independente do wallpaper: começa somente quando solicitada e paus
 
 - **Biblioteca aberta:** o Waypaper aparece no Dock e pode ser minimizado normalmente.
 - **Biblioteca fechada:** continua na barra de menus, sem ícone no Dock ou entrada no Cmd-Tab.
-- **Barra de menus:** abre a biblioteca, importa vídeos, pausa/retoma todos os monitores ou encerra o app.
+- **Barra de menus:** abre a biblioteca, importa vídeos, pausa/retoma todos os monitores, ativa **Abrir ao iniciar a sessão** ou encerra o app.
 
 ## Nitidez sem filtro a cada quadro
 
@@ -144,7 +161,7 @@ flowchart TD
 | [`UI/`](Sources/Waypaper/UI/) | Biblioteca SwiftUI e prévia com AVKit. |
 | [`Library/`](Sources/Waypaper/Library/) | Validação, cópia dos vídeos, miniaturas, persistência e variantes de nitidez. |
 | [`Playback/`](Sources/Waypaper/Playback/) | Identidade dos monitores, coordenação, sessões, janelas e camada de vídeo. |
-| [`Resources/`](Sources/Waypaper/Resources/) | Ícones do aplicativo. |
+| [`Resources/`](Sources/Waypaper/Resources/) | Ícones do aplicativo e `Localizable.xcstrings` (inglês e português do Brasil). |
 | [`scripts/`](scripts/) | Empacotamento e geração dos ícones. |
 
 Estado da interface e coordenação da reprodução usam `@MainActor`. Cópia/análise dos vídeos e geração de miniaturas acontecem fora do ator principal. Importações são serializadas e canceláveis; só aparecem na biblioteca após persistência bem-sucedida.
@@ -158,7 +175,7 @@ Estado da interface e coordenação da reprodução usam `@MainActor`. Cópia/an
 - A reprodução pausa quando o macOS informa que a janela do wallpaper está totalmente oculta e retoma quando ela volta a ficar visível.
 - Com **Reduzir movimento** ativo, a primeira aplicação em um monitor começa pausada.
 
-Não há política automática de bateria, inicialização automática instalada, catálogo remoto ou serviço em segundo plano separado do app. Cada monitor visível reproduz seu próprio vídeo; vários vídeos 4K simultâneos aumentam o consumo.
+Não há política automática de bateria, catálogo remoto ou serviço em segundo plano separado do app. **Abrir ao iniciar a sessão** registra o próprio Waypaper no macOS; não instala outro processo. Cada monitor visível reproduz seu próprio vídeo; vários vídeos 4K simultâneos aumentam o consumo.
 
 ## Seus arquivos ficam no seu Mac
 
@@ -191,6 +208,8 @@ swift run Waypaper "/caminho/para/seu-video.mp4"
 
 Substitua o caminho pelo de um arquivo existente. Cada execução com um arquivo importa uma nova cópia. Se a preferência legada `videoPath` existir no mesmo domínio de preferências, ela é importada uma vez quando a biblioteca está vazia.
 
+**Abrir ao iniciar a sessão** só funciona no `Waypaper.app` empacotado. `swift run` não é um app em bundle, então o interruptor pode falhar num build de desenvolvimento.
+
 ### Gerar DMG e ZIP
 
 Com Python 3 e as ferramentas Apple instalados:
@@ -199,7 +218,7 @@ Com Python 3 e as ferramentas Apple instalados:
 python3 scripts/package.py
 ```
 
-O script compila em **release para arm64**, inclui os recursos, assina o app ad hoc e gera:
+O script compila em **release só para arm64** (não é um binário universal), inclui os recursos, assina o app ad hoc e gera:
 
 ```text
 dist/
@@ -212,7 +231,7 @@ Os vídeos da sua biblioteca não entram no pacote. Para distribuir alterações
 
 ### Releases no GitHub
 
-Ao enviar uma tag de versão, o GitHub Actions gera **Waypaper.dmg** e **Waypaper.zip** (Apple Silicon, macOS 13+) e anexa na [Release](../../releases). A versão do bundle vem da tag (`v1.2.0` → `1.2.0`).
+Ao enviar uma tag de versão, o GitHub Actions gera **Waypaper.dmg** e **Waypaper.zip** para **Apple Silicon, macOS 13+** (não Intel, não é um binário universal) e anexa na [Release](../../releases). A versão do bundle vem da tag (`v1.2.0` → `1.2.0`).
 
 ```sh
 git tag v1.1.0
@@ -229,7 +248,7 @@ Com ffmpeg e uma sessão gráfica ativa:
 python3 scripts/render_demo.py
 ```
 
-O script roda o smoke check, captura a janela real da biblioteca e grava `assets/images/waypaper-demo.gif` sobre um clipe animado sintético. Para gravar a tela (requer permissão de Gravação de Tela no terminal), use `./scripts/record_demo.sh`.
+O script compõe a janela da biblioteca sobre um clipe sintético. O GIF deste README é uma gravação real da tela: `./scripts/record_demo.sh` (requer permissão de Gravação de Tela) abre a biblioteca na frente do desktop e grava o monitor principal por 14 segundos, com um vídeo de teste gerado tocando como wallpaper.
 
 ### Verificar o fluxo completo
 
@@ -243,7 +262,7 @@ O smoke check usa uma **biblioteca temporária**, sem alterar a biblioteca real.
 
 Cobre importação, miniaturas, persistência, entradas inválidas, manifesto corrompido, cancelamento, reprodução com frames reais, pausa, sessões independentes, variante de nitidez com cache e original intacto, loop, reconexão simulada, prévia pela interface e remoção segura. Também salva uma captura da biblioteca no diretório temporário e informa o caminho no terminal.
 
-**Limites da validação local:** os checks foram exercitados com uma única tela física. Duas sessões nessa tela e reconexão simulada não substituem testes com dois monitores físicos, hot-plug, espelhamento, Spaces/Mission Control ou bloqueio/suspensão reais. O smoke check não mede fidelidade, taxa de quadros da exportação ou consumo de recursos; a captura da interface não comprova a composição final do desktop pelo WindowServer.
+**Limites da validação local:** o app foi usado com dois monitores físicos, cada um com seu wallpaper. O smoke check automático ainda roda numa única sessão gráfica: uma segunda sessão nessa tela e a reconexão simulada não cobrem hot-plug real, espelhamento, Spaces/Mission Control ou bloqueio/suspensão. O smoke check não mede fidelidade, taxa de quadros da exportação ou consumo de recursos; a captura da interface não comprova a composição final do desktop pelo WindowServer.
 
 ## Dúvidas rápidas
 
@@ -304,3 +323,5 @@ Avoid: busy wallpaper imagery, tiny illegible detail, text, dock mockups
 ---
 
 Vídeos e artefatos de compilação/distribuição são ignorados pelo Git. As capturas mostram mídia usada para demonstração; o Waypaper não concede direitos de uso ou redistribuição das mídias importadas.
+
+O Waypaper é distribuído sob a [licença MIT](LICENSE).
