@@ -229,14 +229,14 @@ Os vídeos da sua biblioteca não entram no pacote. Para distribuir alterações
 
 ### Releases no GitHub
 
-Ao enviar uma tag de versão, o GitHub Actions gera **Waypaper.dmg** e **Waypaper.zip** para **Apple Silicon, macOS 13+** (não Intel, não é um binário universal) e anexa na [Release](../../releases). A versão do bundle vem da tag (`v1.2.0` → `1.2.0`).
+Ao enviar uma tag de versão, o GitHub Actions gera **Waypaper.dmg** e **Waypaper.zip** para **Apple Silicon, macOS 13+** (não Intel, não é um binário universal) e anexa na [Release](../../releases). A versão do bundle vem da tag (`v1.2.1` → `1.2.1`).
 
 ```sh
-git tag v1.1.0
-git push origin v1.1.0
+git tag v1.2.1
+git push origin v1.2.1
 ```
 
-Variáveis opcionais ao empacotar localmente: `WAYPAPER_VERSION` (versão de marketing) e `WAYPAPER_BUILD` (número gravado em `CFBundleVersion`).
+O pacote local usa a versão `1.2.1` (build `4`) por padrão. Para alterar, defina `WAYPAPER_VERSION` (versão de marketing) e `WAYPAPER_BUILD` (número gravado em `CFBundleVersion`).
 
 ### GIF de demonstração para o README
 

@@ -23,8 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
-        let resources = Bundle.main.url(forResource: "Waypaper_Waypaper", withExtension: "bundle").flatMap(Bundle.init(url:)) ?? Bundle.module
-        if let url = resources.url(forResource: "AppIcon", withExtension: "png") {
+        if let url = L10n.bundle.url(forResource: "AppIcon", withExtension: "png") {
             NSApp.applicationIconImage = NSImage(contentsOf: url)
         }
         installMainMenu()

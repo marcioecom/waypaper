@@ -9,8 +9,8 @@ from pathlib import Path
 
 
 def bundle_versions() -> tuple[str, str]:
-    short = os.environ.get("WAYPAPER_VERSION", "1.1.0").strip()
-    build = os.environ.get("WAYPAPER_BUILD", "2").strip()
+    short = os.environ.get("WAYPAPER_VERSION", "1.2.1").strip()
+    build = os.environ.get("WAYPAPER_BUILD", "4").strip()
     if not short:
         raise SystemExit("WAYPAPER_VERSION must not be empty")
     if not build:

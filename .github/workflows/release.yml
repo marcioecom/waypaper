@@ -36,7 +36,16 @@ jobs:
             -f lavfi -i "testsrc2=size=960x540:rate=30:duration=8" \
             -f lavfi -i "sine=frequency=440:duration=8" \
             -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest "$demo"
-          dist/Waypaper.app/Contents/MacOS/Waypaper --smoke-test "$demo"
+          # Bundle.module falls back to this compile-time path, which exists on the
+          # runner and hides the crash users hit. Hide it so launch must use Contents/Resources.
+          hidden=()
+          while IFS= read -r bundle; do
+            mv "$bundle" "${bundle}.hidden-for-smoke"
+            hidden+=("$bundle")
+          done < <(find .build -type d -name 'Waypaper_Waypaper.bundle')
+          test "${#hidden[@]}" -gt 0
+          trap 'for bundle in "${hidden[@]}"; do mv "${bundle}.hidden-for-smoke" "$bundle"; done' EXIT
+          dist/Waypaper.app/Contents/MacOS/Waypaper --smoke-test "$demo" -AppleLanguages '(pt-BR)'
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2

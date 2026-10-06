@@ -229,14 +229,14 @@ Your library's videos are not included in the package. To distribute recent chan
 
 ### GitHub Releases
 
-Pushing a version tag builds **Waypaper.dmg** and **Waypaper.zip** on GitHub Actions for **Apple Silicon, macOS 13+** (not Intel, not a universal binary) and attaches them to a [GitHub Release](../../releases). The bundle version comes from the tag (`v1.2.0` → `1.2.0`).
+Pushing a version tag builds **Waypaper.dmg** and **Waypaper.zip** on GitHub Actions for **Apple Silicon, macOS 13+** (not Intel, not a universal binary) and attaches them to a [GitHub Release](../../releases). The bundle version comes from the tag (`v1.2.1` → `1.2.1`).
 
 ```sh
-git tag v1.1.0
-git push origin v1.1.0
+git tag v1.2.1
+git push origin v1.2.1
 ```
 
-Optional environment variables when packaging locally: `WAYPAPER_VERSION` (marketing version) and `WAYPAPER_BUILD` (build number written to `CFBundleVersion`).
+Local packaging defaults to version `1.2.1` (build `4`). Override with `WAYPAPER_VERSION` (marketing version) and `WAYPAPER_BUILD` (build number written to `CFBundleVersion`).
 
 ### Demo GIF for the README
 

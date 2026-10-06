@@ -17,6 +17,18 @@ enum SmokeCheck {
     }
 
     static func run(app: AppDelegate, source: URL) async throws {
+        if Bundle.main.bundleURL.pathExtension == "app" {
+            let path = L10n.bundle.bundleURL.standardizedFileURL.path
+            try require(
+                path.contains("/Contents/Resources/Waypaper_Waypaper.bundle"),
+                "O bundle de localização resolveu para \(path). O app empacotado precisa carregar Contents/Resources/Waypaper_Waypaper.bundle; Bundle.module aponta para a pasta .build da máquina que compilou e o app fecha ao abrir em qualquer outro Mac."
+            )
+            if Locale.preferredLanguages.first?.hasPrefix("pt") == true {
+                try require(L10n.string("Quit Waypaper") == "Encerrar Waypaper", "O app empacotado não carregou a tradução pt-BR")
+                print("PASS: tradução pt-BR carregada")
+            }
+            print("PASS: localização carregada de Contents/Resources")
+        }
         let library = app.library
         let displays = app.displays
         guard let root = app.smokeRoot, let screen = displays.displays.first else {
